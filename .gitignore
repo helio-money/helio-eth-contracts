@@ -47,3 +47,4 @@ tests/simulation.csv
 node_modules
 *.env
 typechain/
+typechain-types
