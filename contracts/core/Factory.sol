@@ -20,10 +20,10 @@ contract Factory is PrismaOwnable {
     using Clones for address;
 
     // fixed single-deployment contracts
-    IDebtToken public immutable debtToken;
-    IStabilityPool public immutable stabilityPool;
-    ILiquidationManager public immutable liquidationManager;
-    IBorrowerOperations public immutable borrowerOperations;
+    IDebtToken public debtToken;
+    IStabilityPool public stabilityPool;
+    ILiquidationManager public liquidationManager;
+    IBorrowerOperations public borrowerOperations;
 
     // implementation contracts, redeployed each time via clone proxy
     address public sortedTrovesImpl;
@@ -43,7 +43,12 @@ contract Factory is PrismaOwnable {
         uint256 MCR; // 12 * 1e17  (120%)
     }
 
-    event NewDeployment(address collateral, address priceFeed, address troveManager, address sortedTroves);
+    event NewDeployment(
+        address collateral,
+        address priceFeed,
+        address troveManager,
+        address sortedTroves
+    );
 
     constructor(
         address _prismaCore,
@@ -54,12 +59,32 @@ contract Factory is PrismaOwnable {
         address _troveManager,
         ILiquidationManager _liquidationManager
     ) PrismaOwnable(_prismaCore) {
-        debtToken = _debtToken;
-        stabilityPool = _stabilityPool;
-        borrowerOperations = _borrowerOperations;
+        setDebtToken(_debtToken);
+        setStabilityPool(_stabilityPool);
+        setBorrowerOperations(_borrowerOperations);
+        setLiquidationManager(_liquidationManager);
 
         sortedTrovesImpl = _sortedTroves;
         troveManagerImpl = _troveManager;
+    }
+
+    function setDebtToken(IDebtToken _debtTokenAddress) public onlyOwner {
+        debtToken = _debtTokenAddress;
+    }
+
+    function setStabilityPool(IStabilityPool _stabilityPool) public onlyOwner {
+        stabilityPool = _stabilityPool;
+    }
+
+    function setBorrowerOperations(
+        IBorrowerOperations _borrowerOperations
+    ) public onlyOwner {
+        borrowerOperations = _borrowerOperations;
+    }
+
+    function setLiquidationManager(
+        ILiquidationManager _liquidationManager
+    ) public onlyOwner {
         liquidationManager = _liquidationManager;
     }
 
@@ -89,14 +114,26 @@ contract Factory is PrismaOwnable {
         address customSortedTrovesImpl,
         DeploymentParams memory params
     ) external onlyOwner {
-        address implementation = customTroveManagerImpl == address(0) ? troveManagerImpl : customTroveManagerImpl;
-        address troveManager = implementation.cloneDeterministic(bytes32(bytes20(collateral)));
+        address implementation = customTroveManagerImpl == address(0)
+            ? troveManagerImpl
+            : customTroveManagerImpl;
+        address troveManager = implementation.cloneDeterministic(
+            bytes32(bytes20(collateral))
+        );
         troveManagers.push(troveManager);
 
-        implementation = customSortedTrovesImpl == address(0) ? sortedTrovesImpl : customSortedTrovesImpl;
-        address sortedTroves = implementation.cloneDeterministic(bytes32(bytes20(troveManager)));
+        implementation = customSortedTrovesImpl == address(0)
+            ? sortedTrovesImpl
+            : customSortedTrovesImpl;
+        address sortedTroves = implementation.cloneDeterministic(
+            bytes32(bytes20(troveManager))
+        );
 
-        ITroveManager(troveManager).setAddresses(priceFeed, sortedTroves, collateral);
+        ITroveManager(troveManager).setAddresses(
+            priceFeed,
+            sortedTroves,
+            collateral
+        );
         ISortedTroves(sortedTroves).setAddresses(troveManager);
 
         // verify that the oracle is correctly working
@@ -121,7 +158,10 @@ contract Factory is PrismaOwnable {
         emit NewDeployment(collateral, priceFeed, troveManager, sortedTroves);
     }
 
-    function setImplementations(address _troveManagerImpl, address _sortedTrovesImpl) external onlyOwner {
+    function setImplementations(
+        address _troveManagerImpl,
+        address _sortedTrovesImpl
+    ) external onlyOwner {
         troveManagerImpl = _troveManagerImpl;
         sortedTrovesImpl = _sortedTrovesImpl;
     }
