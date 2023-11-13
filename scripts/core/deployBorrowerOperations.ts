@@ -4,10 +4,10 @@ import { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[1];
 
-export const deployBorrowerOperations = async (prismaCore: Contract) => {
+export const deployBorrowerOperations = async (listaCore: Contract) => {
   console.log("Deploying BorrowerOperations...");
   const borrowerOperations = await ethers.deployContract("BorrowerOperations", [
-    prismaCore.address,
+    listaCore.address,
     ethers.constants.AddressZero,
     ethers.constants.AddressZero,
     params.minNetDebt,

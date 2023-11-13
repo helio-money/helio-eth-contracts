@@ -2,13 +2,13 @@ import { Contract } from "ethers";
 import { ethers } from "hardhat";
 
 export const deployFactory = async (
-  prismaCore: Contract,
+  listaCore: Contract,
   stabilityPool: Contract,
   borrowerOperations: Contract
 ) => {
   console.log("Deploying Factory...");
   const factory = await ethers.deployContract("Factory", [
-    prismaCore.address,
+    listaCore.address,
     ethers.constants.AddressZero,
     stabilityPool.address,
     borrowerOperations.address,

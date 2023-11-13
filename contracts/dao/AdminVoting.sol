@@ -8,9 +8,9 @@ import "../dependencies/SystemStart.sol";
 import "../interfaces/ITokenLocker.sol";
 
 /**
-    @title Prisma DAO Admin Voter
-    @notice Primary ownership contract for all Prisma contracts. Allows executing
-            arbitrary function calls only after a required percentage of PRISMA
+    @title Lista DAO Admin Voter
+    @notice Primary ownership contract for all Lista contracts. Allows executing
+            arbitrary function calls only after a required percentage of LISTA
             lockers have signalled in favor of performing the action.
  */
 contract AdminVoting is DelegatedOps, SystemStart {
@@ -58,7 +58,7 @@ contract AdminVoting is DelegatedOps, SystemStart {
     uint256 public constant SET_GUARDIAN_PASSING_PCT = 5010;
 
     ITokenLocker public immutable tokenLocker;
-    IPrismaCore public immutable prismaCore;
+    IListaCore public immutable listaCore;
 
     Proposal[] proposalData;
     mapping(uint256 => Action[]) proposalPayloads;
@@ -66,7 +66,8 @@ contract AdminVoting is DelegatedOps, SystemStart {
     // account -> ID -> amount of weight voted in favor
     mapping(address => mapping(uint256 => uint256)) public accountVoteWeights;
 
-    mapping(address account => uint256 timestamp) public latestProposalTimestamp;
+    mapping(address account => uint256 timestamp)
+        public latestProposalTimestamp;
 
     // percentages are expressed as a whole number out of `MAX_PCT`
     uint256 public constant MAX_PCT = 10000;
@@ -76,14 +77,14 @@ contract AdminVoting is DelegatedOps, SystemStart {
     uint256 public passingPct;
 
     constructor(
-        address _prismaCore,
+        address _listaCore,
         ITokenLocker _tokenLocker,
         uint256 _minCreateProposalPct,
         uint256 _passingPct,
         uint256 _bootstrapFinish
-    ) SystemStart(_prismaCore) {
+    ) SystemStart(_listaCore) {
         tokenLocker = _tokenLocker;
-        prismaCore = IPrismaCore(_prismaCore);
+        listaCore = IListaCore(_listaCore);
 
         minCreateProposalPct = _minCreateProposalPct;
         passingPct = _passingPct;
@@ -150,11 +151,15 @@ contract AdminVoting is DelegatedOps, SystemStart {
         @param payload Tuple of [(target address, calldata), ... ] to be
                        executed if the proposal is passed.
      */
-    function createNewProposal(address account, Action[] calldata payload) external callerOrDelegated(account) {
+    function createNewProposal(
+        address account,
+        Action[] calldata payload
+    ) external callerOrDelegated(account) {
         require(payload.length > 0, "Empty payload");
 
         require(
-            latestProposalTimestamp[account] + MIN_TIME_BETWEEN_PROPOSALS < block.timestamp,
+            latestProposalTimestamp[account] + MIN_TIME_BETWEEN_PROPOSALS <
+                block.timestamp,
             "MIN_TIME_BETWEEN_PROPOSALS"
         );
 
@@ -164,14 +169,23 @@ contract AdminVoting is DelegatedOps, SystemStart {
         week -= 1;
 
         uint256 accountWeight = tokenLocker.getAccountWeightAt(account, week);
-        require(accountWeight >= minCreateProposalWeight(), "Not enough weight to propose");
+        require(
+            accountWeight >= minCreateProposalWeight(),
+            "Not enough weight to propose"
+        );
 
-        // if the only action is `prismaCore.setGuardian()`, use
+        // if the only action is `listaCore.setGuardian()`, use
         // `SET_GUARDIAN_PASSING_PCT` instead of `passingPct`
         uint256 _passingPct;
-        bool isSetGuardianPayload = _isSetGuardianPayload(payload.length, payload[0]);
+        bool isSetGuardianPayload = _isSetGuardianPayload(
+            payload.length,
+            payload[0]
+        );
         if (isSetGuardianPayload) {
-            require(block.timestamp > BOOTSTRAP_FINISH, "Cannot change guardian during bootstrap");
+            require(
+                block.timestamp > BOOTSTRAP_FINISH,
+                "Cannot change guardian during bootstrap"
+            );
             _passingPct = SET_GUARDIAN_PASSING_PCT;
         } else _passingPct = passingPct;
 
@@ -205,15 +219,25 @@ contract AdminVoting is DelegatedOps, SystemStart {
                       account weight is used. Integrating protocols may wish to use partial
                       weight to reflect partial support from their own users.
      */
-    function voteForProposal(address account, uint256 id, uint256 weight) external callerOrDelegated(account) {
+    function voteForProposal(
+        address account,
+        uint256 id,
+        uint256 weight
+    ) external callerOrDelegated(account) {
         require(id < proposalData.length, "Invalid ID");
         require(accountVoteWeights[account][id] == 0, "Already voted");
 
         Proposal memory proposal = proposalData[id];
         require(!proposal.processed, "Proposal already processed");
-        require(proposal.createdAt + VOTING_PERIOD > block.timestamp, "Voting period has closed");
+        require(
+            proposal.createdAt + VOTING_PERIOD > block.timestamp,
+            "Voting period has closed"
+        );
 
-        uint256 accountWeight = tokenLocker.getAccountWeightAt(account, proposal.week);
+        uint256 accountWeight = tokenLocker.getAccountWeightAt(
+            account,
+            proposal.week
+        );
         if (weight == 0) {
             weight = accountWeight;
             require(weight > 0, "No vote weight");
@@ -243,11 +267,17 @@ contract AdminVoting is DelegatedOps, SystemStart {
         @param id Proposal ID
      */
     function cancelProposal(uint256 id) external {
-        require(msg.sender == prismaCore.guardian(), "Only guardian can cancel proposals");
+        require(
+            msg.sender == listaCore.guardian(),
+            "Only guardian can cancel proposals"
+        );
         require(id < proposalData.length, "Invalid ID");
 
         Action[] storage payload = proposalPayloads[id];
-        require(!_isSetGuardianPayload(payload.length, payload[0]), "Guardian replacement not cancellable");
+        require(
+            !_isSetGuardianPayload(payload.length, payload[0]),
+            "Guardian replacement not cancellable"
+        );
         proposalData[id].processed = true;
         emit ProposalCancelled(id);
     }
@@ -267,7 +297,10 @@ contract AdminVoting is DelegatedOps, SystemStart {
         uint256 executeAfter = proposal.canExecuteAfter;
         require(executeAfter != 0, "Not passed");
         require(executeAfter < block.timestamp, "MIN_TIME_TO_EXECUTION");
-        require(executeAfter + MAX_TIME_TO_EXECUTION > block.timestamp, "MAX_TIME_TO_EXECUTION");
+        require(
+            executeAfter + MAX_TIME_TO_EXECUTION > block.timestamp,
+            "MAX_TIME_TO_EXECUTION"
+        );
 
         proposalData[id].processed = true;
 
@@ -309,22 +342,25 @@ contract AdminVoting is DelegatedOps, SystemStart {
     }
 
     /**
-        @dev Unguarded method to allow accepting ownership transfer of `PrismaCore`
+        @dev Unguarded method to allow accepting ownership transfer of `ListaCore`
              at the end of the deployment sequence
      */
     function acceptTransferOwnership() external {
-        prismaCore.acceptTransferOwnership();
+        listaCore.acceptTransferOwnership();
     }
 
-    function _isSetGuardianPayload(uint256 payloadLength, Action memory action) internal view returns (bool) {
-        if (payloadLength == 1 && action.target == address(prismaCore)) {
+    function _isSetGuardianPayload(
+        uint256 payloadLength,
+        Action memory action
+    ) internal view returns (bool) {
+        if (payloadLength == 1 && action.target == address(listaCore)) {
             bytes memory data = action.data;
             // Extract the call sig from payload data
             bytes4 sig;
             assembly {
                 sig := mload(add(data, 0x20))
             }
-            return sig == IPrismaCore.setGuardian.selector;
+            return sig == IListaCore.setGuardian.selector;
         }
         return false;
     }

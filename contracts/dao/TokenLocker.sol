@@ -2,19 +2,19 @@
 
 pragma solidity 0.8.19;
 
-import "../dependencies/PrismaOwnable.sol";
+import "../dependencies/ListaOwnable.sol";
 import "../dependencies/SystemStart.sol";
-import "../interfaces/IPrismaCore.sol";
+import "../interfaces/IListaCore.sol";
 import "../interfaces/IIncentiveVoting.sol";
-import "../interfaces/IPrismaToken.sol";
+import "../interfaces/IListaToken.sol";
 
 /**
-    @title Prisma Token Locker
-    @notice PRISMA tokens can be locked in this contract to receive "lock weight",
+    @title Lista Token Locker
+    @notice LISTA tokens can be locked in this contract to receive "lock weight",
             which is used within `AdminVoting` and `IncentiveVoting` to vote on
             core protocol operations.
  */
-contract TokenLocker is PrismaOwnable, SystemStart {
+contract TokenLocker is ListaOwnable, SystemStart {
     // The maximum number of weeks that tokens may be locked for. Also determines the maximum
     // number of active locks that a single account may open. Weight is calculated as:
     // `[balance] * [weeks to unlock]`. Weights are stored as `uint40` and balances as `uint32`,
@@ -30,9 +30,9 @@ contract TokenLocker is PrismaOwnable, SystemStart {
     // cannot be violated or the system could break due to overflow.
     uint256 public immutable lockToTokenRatio;
 
-    IPrismaToken public immutable lockToken;
+    IListaToken public immutable lockToken;
     IIncentiveVoting public incentiveVoter;
-    IPrismaCore public immutable prismaCore;
+    IListaCore public immutable listaCore;
     address public immutable deploymentManager;
 
     bool public penaltyWithdrawalsEnabled;
@@ -106,15 +106,15 @@ contract TokenLocker is PrismaOwnable, SystemStart {
     );
 
     constructor(
-        address _prismaCore,
-        IPrismaToken _token,
+        address _listaCore,
+        IListaToken _token,
         IIncentiveVoting _voter,
         address _manager,
         uint256 _lockToTokenRatio
-    ) SystemStart(_prismaCore) PrismaOwnable(_prismaCore) {
+    ) SystemStart(_listaCore) ListaOwnable(_listaCore) {
         lockToken = _token;
         setIncentiveVoter(_voter);
-        prismaCore = IPrismaCore(_prismaCore);
+        listaCore = IListaCore(_listaCore);
         deploymentManager = _manager;
 
         lockToTokenRatio = _lockToTokenRatio;
@@ -994,7 +994,7 @@ contract TokenLocker is PrismaOwnable, SystemStart {
         );
 
         lockToken.transfer(msg.sender, amountToWithdraw);
-        lockToken.transfer(prismaCore.feeReceiver(), penaltyTotal);
+        lockToken.transfer(listaCore.feeReceiver(), penaltyTotal);
         emit LocksWithdrawn(msg.sender, amountToWithdraw, penaltyTotal);
 
         return amountToWithdraw;

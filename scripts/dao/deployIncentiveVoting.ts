@@ -2,13 +2,13 @@ import { Contract } from "ethers";
 import { ethers } from "hardhat";
 
 export const deployIncentiveVoting = async (
-  prismaCore: Contract,
+  listaCore: Contract,
   tokenLocker: Contract,
   vault: Contract
 ) => {
   console.log("Deploying IncentiveVoting...");
   const incentiveVoting = await ethers.deployContract("IncentiveVoting", [
-    prismaCore.address,
+    listaCore.address,
     tokenLocker.address,
     vault.address,
   ]);

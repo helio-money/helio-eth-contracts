@@ -4,9 +4,9 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "../dependencies/PrismaOwnable.sol";
+import "../dependencies/ListaOwnable.sol";
 import "../dependencies/SystemStart.sol";
-import "../interfaces/IPrismaToken.sol";
+import "../interfaces/IListaToken.sol";
 import "../interfaces/IEmissionSchedule.sol";
 import "../interfaces/IIncentiveVoting.sol";
 import "../interfaces/ITokenLocker.sol";
@@ -29,17 +29,17 @@ interface IRewards {
 }
 
 /**
-    @title Prisma Vault
-    @notice The total supply of PRISMA is initially minted to this contract.
+    @title Lista Vault
+    @notice The total supply of LISTA is initially minted to this contract.
             The token balance held here can be considered "uncirculating". The
             vault gradually releases tokens to registered emissions receivers
             as determined by `EmissionSchedule` and `BoostCalculator`.
  */
-contract PrismaVault is PrismaOwnable, SystemStart {
+contract ListaVault is ListaOwnable, SystemStart {
     using Address for address;
     using SafeERC20 for IERC20;
 
-    IPrismaToken public immutable prismaToken;
+    IListaToken public immutable listaToken;
     ITokenLocker public immutable locker;
     IIncentiveVoting public voter;
     address public immutable deploymentManager;
@@ -48,13 +48,13 @@ contract PrismaVault is PrismaOwnable, SystemStart {
     IEmissionSchedule public emissionSchedule;
     IBoostCalculator public boostCalculator;
 
-    // `prismaToken` balance within the treasury that is not yet allocated.
-    // Starts as `prismaToken.totalSupply()` and decreases over time.
+    // `listaToken` balance within the treasury that is not yet allocated.
+    // Starts as `listaToken.totalSupply()` and decreases over time.
     uint128 public unallocatedTotal;
     // most recent week that `unallocatedTotal` was reduced by a call to
     // `emissionSchedule.getTotalWeeklyEmissions`
     uint64 public totalUpdateWeek;
-    // number of weeks that PRISMA is locked for when transferred using
+    // number of weeks that LISTA is locked for when transferred using
     // `transferAllocatedTokens`. updated weekly by the emission schedule.
     uint64 public lockWeeks;
 
@@ -70,7 +70,7 @@ contract PrismaVault is PrismaOwnable, SystemStart {
     // receiver -> remaining tokens which have been allocated but not yet distributed
     mapping(address => uint256) public allocated;
 
-    // account -> week -> PRISMA amount claimed in that week (used for calculating boost)
+    // account -> week -> LISTA amount claimed in that week (used for calculating boost)
     mapping(address => uint128[65535]) accountWeeklyEarned;
 
     // pending rewards for an address (dust after locking, fees from delegation)
@@ -118,14 +118,14 @@ contract PrismaVault is PrismaOwnable, SystemStart {
     );
 
     constructor(
-        address _prismaCore,
-        IPrismaToken _token,
+        address _listaCore,
+        IListaToken _token,
         ITokenLocker _locker,
         IIncentiveVoting _voter,
         address _stabilityPool,
         address _manager
-    ) PrismaOwnable(_prismaCore) SystemStart(_prismaCore) {
-        prismaToken = _token;
+    ) ListaOwnable(_listaCore) SystemStart(_listaCore) {
+        listaToken = _token;
         locker = _locker;
         setIncentiveVoter(_voter);
         lockToTokenRatio = _locker.lockToTokenRatio();
@@ -154,7 +154,7 @@ contract PrismaVault is PrismaOwnable, SystemStart {
         boostCalculator = _boostCalculator;
 
         // mint totalSupply to vault - this reverts after the first call
-        prismaToken.mintToVault(totalSupply);
+        listaToken.mintToVault(totalSupply);
 
         // set initial fixed weekly emissions
         uint256 totalAllocated;
@@ -173,7 +173,7 @@ contract PrismaVault is PrismaOwnable, SystemStart {
             address receiver = initialAllowances[i].receiver;
             totalAllocated += amount;
             // initial allocations are given as approvals
-            prismaToken.increaseAllowance(receiver, amount);
+            listaToken.increaseAllowance(receiver, amount);
         }
 
         unallocatedTotal = uint128(totalSupply - totalAllocated);
@@ -265,7 +265,7 @@ contract PrismaVault is PrismaOwnable, SystemStart {
         address receiver,
         uint256 amount
     ) external onlyOwner returns (bool) {
-        if (address(token) == address(prismaToken)) {
+        if (address(token) == address(listaToken)) {
             require(receiver != address(this), "Self transfer denied");
             uint256 unallocated = unallocatedTotal - amount;
             unallocatedTotal = uint128(unallocated);
@@ -277,10 +277,10 @@ contract PrismaVault is PrismaOwnable, SystemStart {
     }
 
     /**
-        @notice Receive PRISMA tokens and add them to the unallocated supply
+        @notice Receive LISTA tokens and add them to the unallocated supply
      */
     function increaseUnallocatedSupply(uint256 amount) external returns (bool) {
-        prismaToken.transferFrom(msg.sender, address(this), amount);
+        listaToken.transferFrom(msg.sender, address(this), amount);
         uint256 unallocated = unallocatedTotal + amount;
         unallocatedTotal = uint128(unallocated);
         emit UnallocatedSupplyIncreased(amount, unallocated);
@@ -321,10 +321,10 @@ contract PrismaVault is PrismaOwnable, SystemStart {
     }
 
     /**
-        @notice Allocate additional `prismaToken` allowance to an emission reciever
+        @notice Allocate additional `listaToken` allowance to an emission reciever
                 based on the emission schedule
         @param id Receiver ID. The caller must be the receiver mapped to this ID.
-        @return uint256 Additional `prismaToken` allowance for the receiver. The receiver
+        @return uint256 Additional `listaToken` allowance for the receiver. The receiver
                         accesses the tokens using `Vault.transferAllocatedTokens`
      */
     function allocateNewEmissions(uint256 id) external returns (uint256) {
@@ -369,7 +369,7 @@ contract PrismaVault is PrismaOwnable, SystemStart {
     }
 
     /**
-        @notice Transfer `prismaToken` tokens previously allocated to the caller
+        @notice Transfer `listaToken` tokens previously allocated to the caller
         @dev Callable only by registered receiver contracts which were previously
              allocated tokens using `allocateNewEmissions`.
         @param claimant Address that is claiming the tokens
@@ -541,7 +541,7 @@ contract PrismaVault is PrismaOwnable, SystemStart {
         uint256 _lockWeeks = lockWeeks;
         if (_lockWeeks == 0) {
             storedPendingReward[claimant] = 0;
-            prismaToken.transfer(receiver, amount);
+            listaToken.transfer(receiver, amount);
         } else {
             // lock for receiver and store remaining balance in `storedPendingReward`
             uint256 lockAmount = amount / lockToTokenRatio;
@@ -554,7 +554,7 @@ contract PrismaVault is PrismaOwnable, SystemStart {
     }
 
     /**
-        @notice Claimable PRISMA amount for `account` in `rewardContract` after applying boost
+        @notice Claimable LISTA amount for `account` in `rewardContract` after applying boost
         @dev Returns (0, 0) if the boost delegate is invalid, or the delgate's callback fee
              function is incorrectly configured.
         @param account Address claiming rewards

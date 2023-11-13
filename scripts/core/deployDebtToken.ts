@@ -5,7 +5,7 @@ import { ethers } from "hardhat";
 const params = DEPLOYMENT_PARAMS[1];
 
 export const deployDebtToken = async (
-  prismaCore: Contract,
+  listaCore: Contract,
   stabilityPool: Contract,
   borrowerOperations: Contract,
   factory: Contract
@@ -16,7 +16,7 @@ export const deployDebtToken = async (
     params.debtTokenSymbol,
     stabilityPool.address,
     borrowerOperations.address,
-    prismaCore.address,
+    listaCore.address,
     params.lzEndpoint,
     factory.address,
     params.gasPool,

@@ -4,18 +4,18 @@ import { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[1];
 
-export const deployPrismaToken = async (
+export const deployListaToken = async (
   vault: Contract,
   tokenLocker: Contract
 ) => {
-  console.log("Deploying PrismaToken...");
-  const prismaToken = await ethers.deployContract("PrismaToken", [
+  console.log("Deploying ListaToken...");
+  const listaToken = await ethers.deployContract("ListaToken", [
     vault.address,
     params.lzEndpoint,
     tokenLocker.address,
   ]);
-  await prismaToken.waitForDeployment();
-  console.log("PrismaToken deployed to:", await prismaToken.address);
+  await listaToken.waitForDeployment();
+  console.log("ListaToken deployed to:", await listaToken.address);
 
-  return prismaToken;
+  return listaToken;
 };

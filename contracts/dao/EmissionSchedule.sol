@@ -4,17 +4,17 @@ pragma solidity 0.8.19;
 
 import "../interfaces/IIncentiveVoting.sol";
 import "../interfaces/IVault.sol";
-import "../dependencies/PrismaOwnable.sol";
+import "../dependencies/ListaOwnable.sol";
 import "../dependencies/SystemStart.sol";
 
 /**
-    @title Prisma Emission Schedule
-    @notice Calculates weekly PRISMA emissions. The weekly amount is determined
+    @title Lista Emission Schedule
+    @notice Calculates weekly LISTA emissions. The weekly amount is determined
             as a percentage of the remaining unallocated supply. Over time the
             reward rate will decay to dust as it approaches the maximum supply,
             but should not reach zero for a Very Long Time.
  */
-contract EmissionSchedule is PrismaOwnable, SystemStart {
+contract EmissionSchedule is ListaOwnable, SystemStart {
     event WeeklyPctScheduleSet(uint64[2][] schedule);
     event LockParametersSet(uint256 lockWeeks, uint256 lockDecayWeeks);
 
@@ -23,14 +23,14 @@ contract EmissionSchedule is PrismaOwnable, SystemStart {
     uint256 public constant MAX_LOCK_WEEKS = 52;
 
     IIncentiveVoting public immutable voter;
-    IPrismaVault public immutable vault;
+    IListaVault public immutable vault;
 
     // current number of weeks that emissions are locked for when they are claimed
     uint64 public lockWeeks;
     // every `lockDecayWeeks`, the number of lock weeks is decreased by one
     uint64 public lockDecayWeeks;
 
-    // percentage of the unallocated PRISMA supply given as emissions in a week
+    // percentage of the unallocated LISTA supply given as emissions in a week
     uint64 public weeklyPct;
 
     // [(week, weeklyPct)... ] ordered by week descending
@@ -38,14 +38,14 @@ contract EmissionSchedule is PrismaOwnable, SystemStart {
     uint64[2][] private scheduledWeeklyPct;
 
     constructor(
-        address _prismaCore,
+        address _listaCore,
         IIncentiveVoting _voter,
-        IPrismaVault _vault,
+        IListaVault _vault,
         uint64 _initialLockWeeks,
         uint64 _lockDecayWeeks,
         uint64 _weeklyPct,
         uint64[2][] memory _scheduledWeeklyPct
-    ) PrismaOwnable(_prismaCore) SystemStart(_prismaCore) {
+    ) ListaOwnable(_listaCore) SystemStart(_listaCore) {
         voter = _voter;
         vault = _vault;
 
@@ -66,7 +66,9 @@ contract EmissionSchedule is PrismaOwnable, SystemStart {
         @param _schedule Dynamic array of (week, weeklyPct) ordered by week descending.
                          Each `week` indicates the number of weeks after the current week.
      */
-    function setWeeklyPctSchedule(uint64[2][] memory _schedule) external onlyOwner returns (bool) {
+    function setWeeklyPctSchedule(
+        uint64[2][] memory _schedule
+    ) external onlyOwner returns (bool) {
         _setWeeklyPctSchedule(_schedule);
         return true;
     }
@@ -74,7 +76,10 @@ contract EmissionSchedule is PrismaOwnable, SystemStart {
     /**
         @notice Set the number of lock weeks and rate at which lock weeks decay
      */
-    function setLockParameters(uint64 _lockWeeks, uint64 _lockDecayWeeks) external onlyOwner returns (bool) {
+    function setLockParameters(
+        uint64 _lockWeeks,
+        uint64 _lockDecayWeeks
+    ) external onlyOwner returns (bool) {
         require(_lockWeeks <= MAX_LOCK_WEEKS, "Cannot exceed MAX_LOCK_WEEKS");
         require(_lockDecayWeeks > 0, "Decay weeks cannot be 0");
 
@@ -125,18 +130,26 @@ contract EmissionSchedule is PrismaOwnable, SystemStart {
         return (amount, lock);
     }
 
-    function _setWeeklyPctSchedule(uint64[2][] memory _scheduledWeeklyPct) internal {
+    function _setWeeklyPctSchedule(
+        uint64[2][] memory _scheduledWeeklyPct
+    ) internal {
         uint256 length = _scheduledWeeklyPct.length;
         if (length > 0) {
             uint256 week = _scheduledWeeklyPct[0][0];
             uint256 currentWeek = getWeek();
             for (uint256 i = 0; i < length; i++) {
                 if (i > 0) {
-                    require(_scheduledWeeklyPct[i][0] < week, "Must sort by week descending");
+                    require(
+                        _scheduledWeeklyPct[i][0] < week,
+                        "Must sort by week descending"
+                    );
                     week = _scheduledWeeklyPct[i][0];
                 }
                 _scheduledWeeklyPct[i][0] = uint64(week + currentWeek);
-                require(_scheduledWeeklyPct[i][1] <= MAX_PCT, "Cannot exceed MAX_PCT");
+                require(
+                    _scheduledWeeklyPct[i][1] <= MAX_PCT,
+                    "Cannot exceed MAX_PCT"
+                );
             }
             require(week > 0, "Cannot schedule past weeks");
         }

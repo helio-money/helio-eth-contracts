@@ -3,7 +3,7 @@
 pragma solidity 0.8.19;
 
 /**
-    @title Prisma Boost Delegate Interface
+    @title Lista Boost Delegate Interface
     @notice When enabling boost delegation via `Vault.setBoostDelegationParams`,
             you may optionally set a `callback` contract. If set, it should adhere
             to the following interface.

@@ -13,7 +13,13 @@ interface IBorrowerOperations {
     event CollateralConfigured(address troveManager, address collateralToken);
     event TroveCreated(address indexed _borrower, uint256 arrayIndex);
     event TroveManagerRemoved(address troveManager);
-    event TroveUpdated(address indexed _borrower, uint256 _debt, uint256 _coll, uint256 stake, uint8 operation);
+    event TroveUpdated(
+        address indexed _borrower,
+        uint256 _debt,
+        uint256 _coll,
+        uint256 stake,
+        uint8 operation
+    );
 
     function addColl(
         address troveManager,
@@ -37,11 +43,16 @@ interface IBorrowerOperations {
 
     function closeTrove(address troveManager, address account) external;
 
-    function configureCollateral(address troveManager, address collateralToken) external;
+    function configureCollateral(
+        address troveManager,
+        address collateralToken
+    ) external;
 
     function fetchBalances() external returns (Balances memory balances);
 
-    function getGlobalSystemBalances() external returns (uint256 totalPricedCollateral, uint256 totalDebt);
+    function getGlobalSystemBalances()
+        external
+        returns (uint256 totalPricedCollateral, uint256 totalDebt);
 
     function getTCR() external returns (uint256 globalTotalCollateralRatio);
 
@@ -96,7 +107,7 @@ interface IBorrowerOperations {
 
     function PERCENT_DIVISOR() external view returns (uint256);
 
-    function PRISMA_CORE() external view returns (address);
+    function LISTA_CORE() external view returns (address);
 
     function _100pct() external view returns (uint256);
 
@@ -108,11 +119,16 @@ interface IBorrowerOperations {
 
     function guardian() external view returns (address);
 
-    function isApprovedDelegate(address owner, address caller) external view returns (bool isApproved);
+    function isApprovedDelegate(
+        address owner,
+        address caller
+    ) external view returns (bool isApproved);
 
     function minNetDebt() external view returns (uint256);
 
     function owner() external view returns (address);
 
-    function troveManagersData(address) external view returns (address collateralToken, uint16 index);
+    function troveManagersData(
+        address
+    ) external view returns (address collateralToken, uint16 index);
 }

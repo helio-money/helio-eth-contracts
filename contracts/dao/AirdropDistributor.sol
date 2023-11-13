@@ -10,17 +10,20 @@ import "../interfaces/ITokenLocker.sol";
 import "../interfaces/IVault.sol";
 
 interface IClaimCallback {
-    function claimCallback(address claimant, uint256 amount) external returns (bool success);
+    function claimCallback(
+        address claimant,
+        uint256 amount
+    ) external returns (bool success);
 }
 
 /**
-    @title Prisma Airdrop Distributor
-    @notice Distributes PRISMA to veCRV holders that voted in favor of Prisma's
+    @title Lista Airdrop Distributor
+    @notice Distributes LISTA to veCRV holders that voted in favor of Lista's
             initial Curve governance proposal, and to early users who interacted
             with the protocol prior to token emissions.
-    @dev Airdropped PRISMA tokens are given as a locked position. Distribution
+    @dev Airdropped LISTA tokens are given as a locked position. Distribution
          is via a merkle proof. The proof and script used to create are available
-         on Github: https://github.com/prisma-fi/airdrop-proofs
+         on Github: https://github.com/lista-fi/airdrop-proofs
  */
 contract AirdropDistributor is Ownable {
     using Address for address;
@@ -39,10 +42,20 @@ contract AirdropDistributor is Ownable {
     uint256 private immutable CLAIM_LOCK_WEEKS;
     uint256 public constant CLAIM_DURATION = 13 weeks;
 
-    event Claimed(address indexed claimant, address indexed receiver, uint256 index, uint256 amount);
+    event Claimed(
+        address indexed claimant,
+        address indexed receiver,
+        uint256 index,
+        uint256 amount
+    );
     event MerkleRootSet(bytes32 root, uint256 canClaimUntil);
 
-    constructor(IERC20 _token, ITokenLocker _locker, address _vault, uint256 lockWeeks) {
+    constructor(
+        IERC20 _token,
+        ITokenLocker _locker,
+        address _vault,
+        uint256 lockWeeks
+    ) {
         token = _token;
         locker = _locker;
         vault = _vault;
@@ -65,7 +78,7 @@ contract AirdropDistributor is Ownable {
         require(amount > 0, "Nothing to sweep");
         token.transferFrom(vault, address(this), amount);
         token.approve(vault, amount);
-        IPrismaVault(vault).increaseUnallocatedSupply(amount);
+        IListaVault(vault).increaseUnallocatedSupply(amount);
     }
 
     function isClaimed(uint256 index) public view returns (bool) {
@@ -79,7 +92,9 @@ contract AirdropDistributor is Ownable {
     function _setClaimed(uint256 index) private {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+        claimedBitMap[claimedWordIndex] =
+            claimedBitMap[claimedWordIndex] |
+            (1 << claimedBitIndex);
     }
 
     /**
@@ -102,7 +117,10 @@ contract AirdropDistributor is Ownable {
         require(!isClaimed(index), "Already claimed");
 
         bytes32 node = keccak256(abi.encodePacked(index, claimant, amount));
-        require(MerkleProof.verifyCalldata(merkleProof, merkleRoot, node), "Invalid proof");
+        require(
+            MerkleProof.verifyCalldata(merkleProof, merkleRoot, node),
+            "Invalid proof"
+        );
 
         _setClaimed(index);
         token.transferFrom(vault, address(this), amount * lockToTokenRatio);
@@ -110,7 +128,8 @@ contract AirdropDistributor is Ownable {
 
         if (claimant != receiver) {
             address callback = claimCallback[receiver];
-            if (callback != address(0)) IClaimCallback(callback).claimCallback(claimant, amount);
+            if (callback != address(0))
+                IClaimCallback(callback).claimCallback(claimant, amount);
         }
 
         emit Claimed(claimant, receiver, index, amount * lockToTokenRatio);

@@ -4,10 +4,10 @@ import { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[1];
 
-export const deployTokenLocker = async (prismaCore: Contract) => {
+export const deployTokenLocker = async (listaCore: Contract) => {
   console.log("Deploying TokenLocker...");
   const tokenLocker = await ethers.deployContract("TokenLocker", [
-    prismaCore.address,
+    listaCore.address,
     ethers.constants.AddressZero,
     ethers.constants.AddressZero,
     params.manager,

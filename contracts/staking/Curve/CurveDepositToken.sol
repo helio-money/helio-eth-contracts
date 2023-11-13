@@ -7,20 +7,20 @@ import "../../interfaces/ICurveProxy.sol";
 import "../../interfaces/IVault.sol";
 import "../../interfaces/ILiquidityGauge.sol";
 import "../../interfaces/IGaugeController.sol";
-import "../../dependencies/PrismaOwnable.sol";
+import "../../dependencies/ListaOwnable.sol";
 
 /**
-    @title Prisma Curve Deposit Wrapper
+    @title Lista Curve Deposit Wrapper
     @notice Standard ERC20 interface around a deposit of a Curve LP token into it's
             associated gauge. Tokens are minted by depositing Curve LP tokens, and
-            burned to receive the LP tokens back. Holders may claim PRISMA emissions
+            burned to receive the LP tokens back. Holders may claim LISTA emissions
             on top of the earned CRV.
  */
 contract CurveDepositToken {
-    IERC20 public immutable PRISMA;
+    IERC20 public immutable LISTA;
     IERC20 public immutable CRV;
     ICurveProxy public immutable curveProxy;
-    IPrismaVault public immutable vault;
+    IListaVault public immutable vault;
     IGaugeController public immutable gaugeController;
 
     ILiquidityGauge public gauge;
@@ -36,7 +36,7 @@ contract CurveDepositToken {
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
-    // each array relates to [PRISMA, CRV]
+    // each array relates to [LISTA, CRV]
     uint256[2] public rewardIntegral;
     uint128[2] public rewardRate;
     uint32 public lastUpdate;
@@ -48,19 +48,35 @@ contract CurveDepositToken {
     uint256 constant REWARD_DURATION = 1 weeks;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-    event LPTokenDeposited(address indexed lpToken, address indexed receiver, uint256 amount);
-    event LPTokenWithdrawn(address indexed lpToken, address indexed receiver, uint256 amount);
-    event RewardClaimed(address indexed receiver, uint256 prismaAmount, uint256 crvAmount);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
+    event LPTokenDeposited(
+        address indexed lpToken,
+        address indexed receiver,
+        uint256 amount
+    );
+    event LPTokenWithdrawn(
+        address indexed lpToken,
+        address indexed receiver,
+        uint256 amount
+    );
+    event RewardClaimed(
+        address indexed receiver,
+        uint256 listaAmount,
+        uint256 crvAmount
+    );
 
     constructor(
-        IERC20 _prisma,
+        IERC20 _lista,
         IERC20 _CRV,
         ICurveProxy _curveProxy,
-        IPrismaVault _vault,
+        IListaVault _vault,
         IGaugeController _gaugeController
     ) {
-        PRISMA = _prisma;
+        LISTA = _lista;
         CRV = _CRV;
         curveProxy = _curveProxy;
         vault = _vault;
@@ -76,13 +92,15 @@ contract CurveDepositToken {
         IERC20(_token).approve(address(gauge), type(uint256).max);
 
         string memory _symbol = IERC20Metadata(_token).symbol();
-        name = string.concat("Prisma ", _symbol, " Curve Deposit");
-        symbol = string.concat("prisma-", _symbol);
+        name = string.concat("Lista ", _symbol, " Curve Deposit");
+        symbol = string.concat("lista-", _symbol);
 
         periodFinish = uint32(block.timestamp - 1);
     }
 
-    function notifyRegisteredId(uint256[] memory assignedIds) external returns (bool) {
+    function notifyRegisteredId(
+        uint256[] memory assignedIds
+    ) external returns (bool) {
         require(msg.sender == address(vault));
         require(emissionId == 0, "Already registered");
         require(assignedIds.length == 1, "Incorrect ID count");
@@ -101,7 +119,8 @@ contract CurveDepositToken {
         totalSupply = supply + amount;
 
         _updateIntegrals(receiver, balance, supply);
-        if (block.timestamp / 1 weeks >= periodFinish / 1 weeks) _fetchRewards();
+        if (block.timestamp / 1 weeks >= periodFinish / 1 weeks)
+            _fetchRewards();
 
         emit Transfer(address(0), receiver, amount);
         emit LPTokenDeposited(address(lpToken), receiver, amount);
@@ -109,16 +128,25 @@ contract CurveDepositToken {
         return true;
     }
 
-    function withdraw(address receiver, uint256 amount) external returns (bool) {
+    function withdraw(
+        address receiver,
+        uint256 amount
+    ) external returns (bool) {
         require(amount > 0, "Cannot withdraw zero");
         uint256 balance = balanceOf[msg.sender];
         uint256 supply = totalSupply;
         balanceOf[msg.sender] = balance - amount;
         totalSupply = supply - amount;
-        curveProxy.withdrawFromGauge(address(gauge), address(lpToken), amount, receiver);
+        curveProxy.withdrawFromGauge(
+            address(gauge),
+            address(lpToken),
+            amount,
+            receiver
+        );
 
         _updateIntegrals(msg.sender, balance, supply);
-        if (block.timestamp / 1 weeks >= periodFinish / 1 weeks) _fetchRewards();
+        if (block.timestamp / 1 weeks >= periodFinish / 1 weeks)
+            _fetchRewards();
 
         emit Transfer(msg.sender, address(0), amount);
         emit LPTokenWithdrawn(address(lpToken), receiver, amount);
@@ -126,7 +154,10 @@ contract CurveDepositToken {
         return true;
     }
 
-    function _claimReward(address claimant, address receiver) internal returns (uint128[2] memory amounts) {
+    function _claimReward(
+        address claimant,
+        address receiver
+    ) internal returns (uint128[2] memory amounts) {
         _updateIntegrals(claimant, balanceOf[claimant], totalSupply);
         amounts = storedPendingReward[claimant];
         delete storedPendingReward[claimant];
@@ -135,7 +166,9 @@ contract CurveDepositToken {
         return amounts;
     }
 
-    function claimReward(address receiver) external returns (uint256 prismaAmount, uint256 crvAmount) {
+    function claimReward(
+        address receiver
+    ) external returns (uint256 listaAmount, uint256 crvAmount) {
         uint128[2] memory amounts = _claimReward(msg.sender, receiver);
         vault.transferAllocatedTokens(msg.sender, receiver, amounts[0]);
 
@@ -143,7 +176,10 @@ contract CurveDepositToken {
         return (amounts[0], amounts[1]);
     }
 
-    function vaultClaimReward(address claimant, address receiver) external returns (uint256) {
+    function vaultClaimReward(
+        address claimant,
+        address receiver
+    ) external returns (uint256) {
         require(msg.sender == address(vault));
         uint128[2] memory amounts = _claimReward(claimant, receiver);
 
@@ -151,7 +187,9 @@ contract CurveDepositToken {
         return amounts[0];
     }
 
-    function claimableReward(address account) external view returns (uint256 prismaAmount, uint256 crvAmount) {
+    function claimableReward(
+        address account
+    ) external view returns (uint256 listaAmount, uint256 crvAmount) {
         uint256 updated = periodFinish;
         if (updated > block.timestamp) updated = block.timestamp;
         uint256 duration = updated - lastUpdate;
@@ -165,7 +203,9 @@ contract CurveDepositToken {
                 integral += (duration * rewardRate[i] * 1e18) / supply;
             }
             uint256 integralFor = rewardIntegralFor[account][i];
-            amounts[i] = storedPendingReward[account][i] + ((balance * (integral - integralFor)) / 1e18);
+            amounts[i] =
+                storedPendingReward[account][i] +
+                ((balance * (integral - integralFor)) / 1e18);
         }
         return (amounts[0], amounts[1]);
     }
@@ -195,7 +235,11 @@ contract CurveDepositToken {
         return true;
     }
 
-    function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
+    function transferFrom(
+        address _from,
+        address _to,
+        uint256 _value
+    ) public returns (bool) {
         uint256 allowed = allowance[_from][msg.sender];
         if (allowed != type(uint256).max) {
             allowance[_from][msg.sender] = allowed - _value;
@@ -204,7 +248,11 @@ contract CurveDepositToken {
         return true;
     }
 
-    function _updateIntegrals(address account, uint256 balance, uint256 supply) internal {
+    function _updateIntegrals(
+        address account,
+        uint256 balance,
+        uint256 supply
+    ) internal {
         uint256 updated = periodFinish;
         if (updated > block.timestamp) updated = block.timestamp;
         uint256 duration = updated - lastUpdate;
@@ -219,7 +267,9 @@ contract CurveDepositToken {
             if (account != address(0)) {
                 uint256 integralFor = rewardIntegralFor[account][i];
                 if (integral > integralFor) {
-                    storedPendingReward[account][i] += uint128((balance * (integral - integralFor)) / 1e18);
+                    storedPendingReward[account][i] += uint128(
+                        (balance * (integral - integralFor)) / 1e18
+                    );
                     rewardIntegralFor[account][i] = integral;
                 }
             }
@@ -227,15 +277,18 @@ contract CurveDepositToken {
     }
 
     function fetchRewards() external {
-        require(block.timestamp / 1 weeks >= periodFinish / 1 weeks, "Can only fetch once per week");
+        require(
+            block.timestamp / 1 weeks >= periodFinish / 1 weeks,
+            "Can only fetch once per week"
+        );
         _updateIntegrals(address(0), 0, totalSupply);
         _fetchRewards();
     }
 
     function _fetchRewards() internal {
-        uint256 prismaAmount;
+        uint256 listaAmount;
         uint256 id = emissionId;
-        if (id > 0) prismaAmount = vault.allocateNewEmissions(id);
+        if (id > 0) listaAmount = vault.allocateNewEmissions(id);
 
         // only claim with non-zero weight to allow active receiver before Curve gauge is voted in
         uint256 crvAmount;
@@ -246,10 +299,10 @@ contract CurveDepositToken {
         uint256 _periodFinish = periodFinish;
         if (block.timestamp < _periodFinish) {
             uint256 remaining = _periodFinish - block.timestamp;
-            prismaAmount += remaining * rewardRate[0];
+            listaAmount += remaining * rewardRate[0];
             crvAmount += remaining * rewardRate[1];
         }
-        rewardRate[0] = uint128(prismaAmount / REWARD_DURATION);
+        rewardRate[0] = uint128(listaAmount / REWARD_DURATION);
         rewardRate[1] = uint128(crvAmount / REWARD_DURATION);
 
         lastUpdate = uint32(block.timestamp);
