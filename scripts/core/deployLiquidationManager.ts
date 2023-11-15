@@ -2,7 +2,7 @@ import { DEPLOYMENT_PARAMS } from "../../constants";
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
 
-const params = DEPLOYMENT_PARAMS[1];
+const params = DEPLOYMENT_PARAMS[11155111];
 
 export const deployLiquidationManager = async (
   stabilityPool: Contract,
@@ -16,7 +16,7 @@ export const deployLiquidationManager = async (
     factory.address,
     params.gasCompensation,
   ]);
-  await liquidationManager.waitForDeployment();
+  await liquidationManager.deployed();
   console.log(
     "LiquidationManager deployed to:",
     await liquidationManager.address

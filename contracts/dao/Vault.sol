@@ -41,9 +41,10 @@ contract ListaVault is ListaOwnable, SystemStart {
 
     IListaToken public immutable listaToken;
     ITokenLocker public immutable locker;
-    IIncentiveVoting public voter;
+    IIncentiveVoting public immutable voter;
     address public immutable deploymentManager;
     uint256 immutable lockToTokenRatio;
+    address public immutable stabilityPool;
 
     IEmissionSchedule public emissionSchedule;
     IBoostCalculator public boostCalculator;
@@ -127,18 +128,17 @@ contract ListaVault is ListaOwnable, SystemStart {
     ) ListaOwnable(_listaCore) SystemStart(_listaCore) {
         listaToken = _token;
         locker = _locker;
-        setIncentiveVoter(_voter);
+        voter = _voter;
         lockToTokenRatio = _locker.lockToTokenRatio();
         deploymentManager = _manager;
-
-        // ensure the stability pool is registered with receiver ID 0
-        _voter.registerNewReceiver();
-        idToReceiver[0] = Receiver({account: _stabilityPool, isActive: true});
-        emit NewReceiverRegistered(_stabilityPool, 0);
+        stabilityPool = _stabilityPool;
     }
 
-    function setIncentiveVoter(IIncentiveVoting _voter) public onlyOwner {
-        voter = _voter;
+    function registerNewReceiver() external {
+        // ensure the stability pool is registered with receiver ID 0
+        voter.registerNewReceiver();
+        idToReceiver[0] = Receiver({account: stabilityPool, isActive: true});
+        emit NewReceiverRegistered(stabilityPool, 0);
     }
 
     function setInitialParameters(

@@ -31,6 +31,8 @@ interface IListaVault {
         uint256 unallocatedTotal
     );
 
+    function registerNewReceiver() external;
+
     function allocateNewEmissions(uint256 id) external returns (uint256);
 
     function batchClaimRewards(

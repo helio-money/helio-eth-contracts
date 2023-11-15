@@ -23,7 +23,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
     using SafeERC20 for IERC20;
 
     IDebtToken public debtToken;
-    address public immutable factory;
+    address public factory;
     uint256 public minNetDebt;
 
     mapping(ITroveManager => TroveManagerData) public troveManagersData;
@@ -93,9 +93,13 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         uint256 _minNetDebt,
         uint256 _gasCompensation
     ) ListaOwnable(_listaCore) ListaBase(_gasCompensation) {
-        factory = _factory;
+        setFactory(_factory);
         setDebtToken(_debtTokenAddress);
         _setMinNetDebt(_minNetDebt);
+    }
+
+    function setFactory(address _factory) public onlyOwner {
+        factory = _factory;
     }
 
     function setDebtToken(address _debtTokenAddress) public onlyOwner {

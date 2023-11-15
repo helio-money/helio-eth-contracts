@@ -16,7 +16,7 @@ export const deployFactory = async (
     ethers.constants.AddressZero,
     ethers.constants.AddressZero,
   ]);
-  await factory.waitForDeployment();
+  await factory.deployed();
   console.log("Factory deployed to:", await factory.address);
 
   console.log("Updating factory in StabilityPool...");

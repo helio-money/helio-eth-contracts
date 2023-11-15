@@ -10,7 +10,7 @@ export const deployStabilityPool = async (listaCore: Contract) => {
     ethers.constants.AddressZero,
     ethers.constants.AddressZero,
   ]);
-  await stabilityPool.waitForDeployment();
+  await stabilityPool.deployed();
   console.log("StabilityPool deployed to:", await stabilityPool.address);
 
   return stabilityPool;
