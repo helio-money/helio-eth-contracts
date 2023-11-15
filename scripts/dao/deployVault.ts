@@ -30,9 +30,15 @@ export const deployVault = async (
   await incentiveVoting.setVault(vault.address);
   console.log("Updated ListaVault in IncentiveVoting...");
 
-  console.log("Registering new receiver in Vault...");
-  await vault.registerNewReceiver();
-  console.log("Registered new receiver in Vault...");
+  while (true) {
+    const updatedVaultAddress = await incentiveVoting.vault();
+    if (updatedVaultAddress === vault.address) {
+      console.log("Registering new receiver in Vault...");
+      await vault.registerNewReceiver();
+      console.log("Registered new receiver in Vault...");
+      break;
+    }
+  }
 
   return vault;
 };

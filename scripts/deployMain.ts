@@ -48,6 +48,7 @@ export const deployMain = async () => {
   console.log("PriceFeed:", priceFeed.address);
   console.log("BorrowOperations:", borrowerOperations.address);
   console.log("StabilityPool:", stabilityPool.address);
+  console.log("Factory:", factory.address);
   console.log("LiquidationManager:", liquidationManager.address);
   console.log("DebtToken:", debtToken.address);
   console.log("TokenLocker:", tokenLocker.address);
