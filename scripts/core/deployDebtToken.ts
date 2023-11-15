@@ -2,10 +2,10 @@ import { DEPLOYMENT_PARAMS } from "../../constants";
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
 
-const params = DEPLOYMENT_PARAMS[1];
+const params = DEPLOYMENT_PARAMS[11155111];
 
 export const deployDebtToken = async (
-  prismaCore: Contract,
+  listaCore: Contract,
   stabilityPool: Contract,
   borrowerOperations: Contract,
   factory: Contract
@@ -16,13 +16,13 @@ export const deployDebtToken = async (
     params.debtTokenSymbol,
     stabilityPool.address,
     borrowerOperations.address,
-    prismaCore.address,
+    listaCore.address,
     params.lzEndpoint,
     factory.address,
     params.gasPool,
     params.gasCompensation,
   ]);
-  await debtToken.waitForDeployment();
+  await debtToken.deployed();
   console.log("DebtToken deployed to:", await debtToken.address);
 
   console.log("Updating debtToken in StabilityPool...");

@@ -6,7 +6,7 @@ pragma solidity 0.8.19;
  * Base contract for TroveManager, BorrowerOperations and StabilityPool. Contains global system constants and
  * common functions.
  */
-contract PrismaBase {
+contract ListaBase {
     uint256 public constant DECIMAL_PRECISION = 1e18;
 
     // Critical system collateral ratio. If the system's total collateral ratio (TCR) falls below the CCR, Recovery Mode is triggered.
@@ -33,12 +33,21 @@ contract PrismaBase {
     }
 
     // Return the amount of collateral to be drawn from a trove's collateral and sent as gas compensation.
-    function _getCollGasCompensation(uint256 _entireColl) internal pure returns (uint256) {
+    function _getCollGasCompensation(
+        uint256 _entireColl
+    ) internal pure returns (uint256) {
         return _entireColl / PERCENT_DIVISOR;
     }
 
-    function _requireUserAcceptsFee(uint256 _fee, uint256 _amount, uint256 _maxFeePercentage) internal pure {
+    function _requireUserAcceptsFee(
+        uint256 _fee,
+        uint256 _amount,
+        uint256 _maxFeePercentage
+    ) internal pure {
         uint256 feePercentage = (_fee * DECIMAL_PRECISION) / _amount;
-        require(feePercentage <= _maxFeePercentage, "Fee exceeded provided maximum");
+        require(
+            feePercentage <= _maxFeePercentage,
+            "Fee exceeded provided maximum"
+        );
     }
 }

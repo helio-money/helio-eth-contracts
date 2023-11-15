@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-library PrismaMath {
+library ListaMath {
     uint256 internal constant DECIMAL_PRECISION = 1e18;
 
     /* Precision for Nominal ICR (independent of price). Rationale for the value:
@@ -31,7 +31,10 @@ library PrismaMath {
      *
      * Used only inside the exponentiation, _decPow().
      */
-    function decMul(uint256 x, uint256 y) internal pure returns (uint256 decProd) {
+    function decMul(
+        uint256 x,
+        uint256 y
+    ) internal pure returns (uint256 decProd) {
         uint256 prod_xy = x * y;
 
         decProd = (prod_xy + (DECIMAL_PRECISION / 2)) / DECIMAL_PRECISION;
@@ -55,7 +58,10 @@ library PrismaMath {
      * In function 1), the decayed base rate will be 0 for 1000 years or > 1000 years
      * In function 2), the difference in tokens issued at 1000 years and any time > 1000 years, will be negligible
      */
-    function _decPow(uint256 _base, uint256 _minutes) internal pure returns (uint256) {
+    function _decPow(
+        uint256 _base,
+        uint256 _minutes
+    ) internal pure returns (uint256) {
         if (_minutes > 525600000) {
             _minutes = 525600000;
         } // cap to avoid overflow
@@ -84,11 +90,17 @@ library PrismaMath {
         return decMul(x, y);
     }
 
-    function _getAbsoluteDifference(uint256 _a, uint256 _b) internal pure returns (uint256) {
+    function _getAbsoluteDifference(
+        uint256 _a,
+        uint256 _b
+    ) internal pure returns (uint256) {
         return (_a >= _b) ? _a - _b : _b - _a;
     }
 
-    function _computeNominalCR(uint256 _coll, uint256 _debt) internal pure returns (uint256) {
+    function _computeNominalCR(
+        uint256 _coll,
+        uint256 _debt
+    ) internal pure returns (uint256) {
         if (_debt > 0) {
             return (_coll * NICR_PRECISION) / _debt;
         }
@@ -99,7 +111,11 @@ library PrismaMath {
         }
     }
 
-    function _computeCR(uint256 _coll, uint256 _debt, uint256 _price) internal pure returns (uint256) {
+    function _computeCR(
+        uint256 _coll,
+        uint256 _debt,
+        uint256 _price
+    ) internal pure returns (uint256) {
         if (_debt > 0) {
             uint256 newCollRatio = (_coll * _price) / _debt;
 
@@ -112,7 +128,10 @@ library PrismaMath {
         }
     }
 
-    function _computeCR(uint256 _coll, uint256 _debt) internal pure returns (uint256) {
+    function _computeCR(
+        uint256 _coll,
+        uint256 _debt
+    ) internal pure returns (uint256) {
         if (_debt > 0) {
             uint256 newCollRatio = (_coll) / _debt;
 

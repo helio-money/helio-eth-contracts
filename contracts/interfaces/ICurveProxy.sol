@@ -15,15 +15,24 @@ interface ICurveProxy {
 
     event CrvFeePctSet(uint256 feePct);
 
-    function approveGaugeDeposit(address gauge, address depositor) external returns (bool);
+    function approveGaugeDeposit(
+        address gauge,
+        address depositor
+    ) external returns (bool);
 
     function claimFees() external returns (uint256);
 
-    function execute(address target, bytes calldata data) external returns (bytes memory);
+    function execute(
+        address target,
+        bytes calldata data
+    ) external returns (bytes memory);
 
     function lockCRV() external returns (bool);
 
-    function mintCRV(address gauge, address receiver) external returns (uint256);
+    function mintCRV(
+        address gauge,
+        address receiver
+    ) external returns (uint256);
 
     function setCrvFeePct(uint64 _feePct) external returns (bool);
 
@@ -36,17 +45,32 @@ interface ICurveProxy {
         bool permitted
     ) external returns (bool);
 
-    function setGaugeRewardsReceiver(address gauge, address receiver) external returns (bool);
+    function setGaugeRewardsReceiver(
+        address gauge,
+        address receiver
+    ) external returns (bool);
 
-    function setPerGaugeApproval(address caller, address gauge) external returns (bool);
+    function setPerGaugeApproval(
+        address caller,
+        address gauge
+    ) external returns (bool);
 
     function setVoteManager(address _voteManager) external returns (bool);
 
-    function transferTokens(address receiver, TokenBalance[] calldata balances) external returns (bool);
+    function transferTokens(
+        address receiver,
+        TokenBalance[] calldata balances
+    ) external returns (bool);
 
-    function voteForGaugeWeights(GaugeWeightVote[] calldata votes) external returns (bool);
+    function voteForGaugeWeights(
+        GaugeWeightVote[] calldata votes
+    ) external returns (bool);
 
-    function voteInCurveDao(address aragon, uint256 id, bool support) external returns (bool);
+    function voteInCurveDao(
+        address aragon,
+        uint256 id,
+        bool support
+    ) external returns (bool);
 
     function withdrawFromGauge(
         address gauge,
@@ -57,7 +81,7 @@ interface ICurveProxy {
 
     function CRV() external view returns (address);
 
-    function PRISMA_CORE() external view returns (address);
+    function LISTA_CORE() external view returns (address);
 
     function crvFeePct() external view returns (uint64);
 
@@ -75,7 +99,9 @@ interface ICurveProxy {
 
     function owner() external view returns (address);
 
-    function perGaugeApproval(address caller) external view returns (address gauge);
+    function perGaugeApproval(
+        address caller
+    ) external view returns (address gauge);
 
     function unlockTime() external view returns (uint64);
 

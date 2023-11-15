@@ -2,28 +2,43 @@ import { DEPLOYMENT_PARAMS } from "../../constants";
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
 
-const params = DEPLOYMENT_PARAMS[1];
+const params = DEPLOYMENT_PARAMS[11155111];
 
 export const deployVault = async (
-  prismaCore: Contract,
+  listaCore: Contract,
   stabilityPool: Contract,
-  tokenLocker: Contract
+  tokenLocker: Contract,
+  incentiveVoting: Contract
 ) => {
-  console.log("Deploying PrismaVault...");
-  const vault = await ethers.deployContract("PrismaVault", [
-    prismaCore.address,
+  console.log("Deploying ListaVault...");
+  const vault = await ethers.deployContract("ListaVault", [
+    listaCore.address,
     ethers.constants.AddressZero,
     tokenLocker.address,
-    ethers.constants.AddressZero,
+    incentiveVoting.address,
     stabilityPool.address,
     params.manager,
   ]);
-  await vault.waitForDeployment();
-  console.log("PrismaVault deployed to:", await vault.address);
+  await vault.deployed();
+  console.log("ListaVault deployed to:", await vault.address);
 
-  console.log("Updating PrismaVault in StabilityPool...");
+  console.log("Updating ListaVault in StabilityPool...");
   await stabilityPool.setVault(vault.address);
-  console.log("Updated PrismaVault in StabilityPool...");
+  console.log("Updated ListaVault in StabilityPool...");
+
+  console.log("Updating ListaVault in IncentiveVoting...");
+  await incentiveVoting.setVault(vault.address);
+  console.log("Updated ListaVault in IncentiveVoting...");
+
+  while (true) {
+    const updatedVaultAddress = await incentiveVoting.vault();
+    if (updatedVaultAddress === vault.address) {
+      console.log("Registering new receiver in Vault...");
+      await vault.registerNewReceiver();
+      console.log("Registered new receiver in Vault...");
+      break;
+    }
+  }
 
   return vault;
 };

@@ -44,6 +44,11 @@ const config: HardhatUserConfig = {
       url: `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
       accounts: [process.env.DEPLOYER_KEY as string],
     },
+    sepolia: {
+      chainId: 11155111,
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      accounts: [process.env.DEPLOYER_KEY as string],
+    },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

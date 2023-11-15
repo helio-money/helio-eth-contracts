@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import "../../interfaces/ITroveManager.sol";
 import "../../interfaces/IFactory.sol";
 
-/*  Helper contract for grabbing Trove data for the front end. Not part of the core Prisma system. */
+/*  Helper contract for grabbing Trove data for the front end. Not part of the core Lista system. */
 contract TroveManagerGetters {
     struct Collateral {
         address collateral;
@@ -22,9 +22,15 @@ contract TroveManagerGetters {
         @notice Returns all active system trove managers and collaterals, as an
         `       array of tuples of [(collateral, [troveManager, ...]), ...]
      */
-    function getAllCollateralsAndTroveManagers() external view returns (Collateral[] memory) {
+    function getAllCollateralsAndTroveManagers()
+        external
+        view
+        returns (Collateral[] memory)
+    {
         uint256 length = factory.troveManagerCount();
-        address[2][] memory troveManagersAndCollaterals = new address[2][](length);
+        address[2][] memory troveManagersAndCollaterals = new address[2][](
+            length
+        );
         address[] memory uniqueCollaterals = new address[](length);
         uint256 collateralCount;
         for (uint i = 0; i < length; i++) {
@@ -47,7 +53,9 @@ contract TroveManagerGetters {
             address[] memory troveManagers = new address[](length);
             for (uint x = 0; x < length; x++) {
                 if (troveManagersAndCollaterals[x][1] == uniqueCollaterals[i]) {
-                    troveManagers[tmCollCount] = troveManagersAndCollaterals[x][0];
+                    troveManagers[tmCollCount] = troveManagersAndCollaterals[x][
+                        0
+                    ];
                     tmCollCount++;
                 }
             }
@@ -63,7 +71,9 @@ contract TroveManagerGetters {
     /**
         @notice Returns a list of trove managers where `account` has an existing trove
      */
-    function getActiveTroveManagersForAccount(address account) external view returns (address[] memory) {
+    function getActiveTroveManagersForAccount(
+        address account
+    ) external view returns (address[] memory) {
         uint256 length = factory.troveManagerCount();
         address[] memory troveManagers = new address[](length);
         uint256 tmCount;

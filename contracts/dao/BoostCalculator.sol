@@ -6,15 +6,15 @@ import "../interfaces/ITokenLocker.sol";
 import "../dependencies/SystemStart.sol";
 
 /**
-    @title Prisma Boost Calculator
-    @notice "Boost" refers to a bonus to claimable PRISMA tokens that an account
-            receives based on it's locked PRISMA weight. An account with "Max boost"
-            is earning PRISMA rewards at 2x the rate of an account that is unboosted.
+    @title Lista Boost Calculator
+    @notice "Boost" refers to a bonus to claimable LISTA tokens that an account
+            receives based on it's locked LISTA weight. An account with "Max boost"
+            is earning LISTA rewards at 2x the rate of an account that is unboosted.
             Boost works as follows:
 
-            * In a given week, the percentage of the weekly PRISMA rewards that an
+            * In a given week, the percentage of the weekly LISTA rewards that an
             account can claim with maximum boost is the same as the percentage
-            of PRISMA lock weight that the account has, relative to the total lock
+            of LISTA lock weight that the account has, relative to the total lock
             weight.
             * Once an account's weekly claims exceed the amount allowed with max boost,
             the boost rate decays linearly from 2x to 1x. This decay occurs over the same
@@ -27,12 +27,12 @@ import "../dependencies/SystemStart.sol";
 
             * At the end of week 1, Alice has a lock weight of 100. There is a total
               lock weight of 1,000. Alice controls 10% of the total lock weight.
-            * During week 2, a total of 500,000 new PRISMA rewards are made available
+            * During week 2, a total of 500,000 new LISTA rewards are made available
             * Because Alice has 10% of the lock weight in week 1, during week 2 she
-              can claim up to 10% of the rewards (50,000 PRISMA) with her full boost.
-            * Once Alice's weekly claim exceeds 50,000 PRISMA, her boost decays linearly
-              as she claims another 50,000 PRISMA.
-            * Once Alice's weekly claims exceed 100,000 PRISMA, any further claims are
+              can claim up to 10% of the rewards (50,000 LISTA) with her full boost.
+            * Once Alice's weekly claim exceeds 50,000 LISTA, her boost decays linearly
+              as she claims another 50,000 LISTA.
+            * Once Alice's weekly claims exceed 100,000 LISTA, any further claims are
               "unboosted" and receive only half as many tokens as they would have boosted.
             * At the start of the next week, Alice's boost is fully replenished. She still
               controls 10% of the total lock weight, so she can claim another 10% of this
@@ -60,7 +60,11 @@ contract BoostCalculator is SystemStart {
     // account -> week -> % of lock weight (where 1e9 represents 100%)
     mapping(address account => uint32[65535]) accountWeeklyLockPct;
 
-    constructor(address _prismaCore, ITokenLocker _locker, uint256 _graceWeeks) SystemStart(_prismaCore) {
+    constructor(
+        address _listaCore,
+        ITokenLocker _locker,
+        uint256 _graceWeeks
+    ) SystemStart(_listaCore) {
         require(_graceWeeks > 0, "Grace weeks cannot be 0");
         locker = _locker;
         MAX_BOOST_GRACE_WEEKS = _graceWeeks + getWeek();
@@ -71,8 +75,8 @@ contract BoostCalculator is SystemStart {
         @param account Address claiming the reward
         @param amount Amount being claimed (assuming maximum boost)
         @param previousAmount Amount that was already claimed in the current week
-        @param totalWeeklyEmissions Total PRISMA emissions released this week
-        @return adjustedAmount Amount of PRISMA received after applying boost
+        @param totalWeeklyEmissions Total LISTA emissions released this week
+        @return adjustedAmount Amount of LISTA received after applying boost
      */
     function getBoostedAmount(
         address account,
@@ -89,14 +93,20 @@ contract BoostCalculator is SystemStart {
         if (totalWeight == 0) totalWeight = 1;
         uint256 pct = (1e9 * accountWeight) / totalWeight;
         if (pct == 0) pct = 1;
-        return _getBoostedAmount(amount, previousAmount, totalWeeklyEmissions, pct);
+        return
+            _getBoostedAmount(
+                amount,
+                previousAmount,
+                totalWeeklyEmissions,
+                pct
+            );
     }
 
     /**
         @notice Get the remaining claimable amounts this week that will receive boost
         @param claimant address to query boost amounts for
         @param previousAmount Amount that was already claimed in the current week
-        @param totalWeeklyEmissions Total PRISMA emissions released this week
+        @param totalWeeklyEmissions Total LISTA emissions released this week
         @return maxBoosted remaining claimable amount that will receive max boost
         @return boosted remaining claimable amount that will receive some amount of boost (including max boost)
      */
@@ -133,8 +143,8 @@ contract BoostCalculator is SystemStart {
         @param account Address claiming the reward
         @param amount Amount being claimed (assuming maximum boost)
         @param previousAmount Amount that was already claimed in the current week
-        @param totalWeeklyEmissions Total PRISMA emissions released this week
-        @return adjustedAmount Amount of PRISMA received after applying boost
+        @param totalWeeklyEmissions Total LISTA emissions released this week
+        @return adjustedAmount Amount of LISTA received after applying boost
      */
     function getBoostedAmountWrite(
         address account,
@@ -161,7 +171,13 @@ contract BoostCalculator is SystemStart {
             accountWeeklyLockPct[account][week] = uint32(pct);
         }
 
-        return _getBoostedAmount(amount, previousAmount, totalWeeklyEmissions, pct);
+        return
+            _getBoostedAmount(
+                amount,
+                previousAmount,
+                totalWeeklyEmissions,
+                pct
+            );
     }
 
     function _getBoostedAmount(
@@ -197,16 +213,23 @@ contract BoostCalculator is SystemStart {
         }
 
         // simplified calculation if remaining claim is the entire decay amount
-        if (amount == maxBoostable) return adjustedAmount + ((maxBoostable * 3) / 4);
+        if (amount == maxBoostable)
+            return adjustedAmount + ((maxBoostable * 3) / 4);
 
         // remaining calculations handle claim that spans only part of the decay
 
         // get adjusted amount based on the final boost
-        uint256 finalBoosted = amount - (amount * (previousAmount + amount - maxBoostable)) / maxBoostable / 2;
+        uint256 finalBoosted = amount -
+            (amount * (previousAmount + amount - maxBoostable)) /
+            maxBoostable /
+            2;
         adjustedAmount += finalBoosted;
 
         // get adjusted amount based on the initial boost
-        uint256 initialBoosted = amount - (amount * (previousAmount - maxBoostable)) / maxBoostable / 2;
+        uint256 initialBoosted = amount -
+            (amount * (previousAmount - maxBoostable)) /
+            maxBoostable /
+            2;
         // with linear decay, adjusted amount is half of the difference between initial and final boost amounts
         adjustedAmount += (initialBoosted - finalBoosted) / 2;
 

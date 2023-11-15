@@ -3,7 +3,7 @@
 pragma solidity 0.8.19;
 
 /**
-    @title Prisma Delegated Operations
+    @title Lista Delegated Operations
     @notice Allows delegation to specific contract functionality. Useful for creating
             wrapper contracts to bundle multiple interactions into a single call.
 
@@ -17,10 +17,14 @@ pragma solidity 0.8.19;
             minted tokens to the caller.
  */
 contract DelegatedOps {
-    mapping(address owner => mapping(address caller => bool isApproved)) public isApprovedDelegate;
+    mapping(address owner => mapping(address caller => bool isApproved))
+        public isApprovedDelegate;
 
     modifier callerOrDelegated(address _account) {
-        require(msg.sender == _account || isApprovedDelegate[_account][msg.sender], "Delegate not approved");
+        require(
+            msg.sender == _account || isApprovedDelegate[_account][msg.sender],
+            "Delegate not approved"
+        );
         _;
     }
 

@@ -6,24 +6,24 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/ITroveManager.sol";
 import "../interfaces/IDebtToken.sol";
-import "../dependencies/PrismaBase.sol";
-import "../dependencies/PrismaMath.sol";
-import "../dependencies/PrismaOwnable.sol";
+import "../dependencies/ListaBase.sol";
+import "../dependencies/ListaMath.sol";
+import "../dependencies/ListaOwnable.sol";
 import "../dependencies/DelegatedOps.sol";
 
 /**
-    @title Prisma Borrower Operations
+    @title Lista Borrower Operations
     @notice Based on Liquity's `BorrowerOperations`
             https://github.com/liquity/dev/blob/main/packages/contracts/contracts/BorrowerOperations.sol
 
-            Prisma's implementation is modified to support multiple collaterals. There is a 1:n
+            Lista's implementation is modified to support multiple collaterals. There is a 1:n
             relationship between `BorrowerOperations` and each `TroveManager` / `SortedTroves` pair.
  */
-contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
+contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
     using SafeERC20 for IERC20;
 
     IDebtToken public debtToken;
-    address public immutable factory;
+    address public factory;
     uint256 public minNetDebt;
 
     mapping(ITroveManager => TroveManagerData) public troveManagersData;
@@ -87,15 +87,19 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
     event TroveManagerRemoved(ITroveManager troveManager);
 
     constructor(
-        address _prismaCore,
+        address _listaCore,
         address _debtTokenAddress,
         address _factory,
         uint256 _minNetDebt,
         uint256 _gasCompensation
-    ) PrismaOwnable(_prismaCore) PrismaBase(_gasCompensation) {
-        factory = _factory;
+    ) ListaOwnable(_listaCore) ListaBase(_gasCompensation) {
+        setFactory(_factory);
         setDebtToken(_debtTokenAddress);
         _setMinNetDebt(_minNetDebt);
+    }
+
+    function setFactory(address _factory) public onlyOwner {
+        factory = _factory;
     }
 
     function setDebtToken(address _debtTokenAddress) public onlyOwner {
@@ -200,7 +204,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
         address _upperHint,
         address _lowerHint
     ) external callerOrDelegated(account) {
-        require(!PRISMA_CORE.paused(), "Deposits are paused");
+        require(!LISTA_CORE.paused(), "Deposits are paused");
         IERC20 collateralToken;
         LocalVariables_openTrove memory vars;
         bool isRecoveryMode;
@@ -231,12 +235,12 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
 
         // ICR is based on the composite debt, i.e. the requested Debt amount + Debt borrowing fee + Debt gas comp.
         vars.compositeDebt = _getCompositeDebt(vars.netDebt);
-        vars.ICR = PrismaMath._computeCR(
+        vars.ICR = ListaMath._computeCR(
             _collateralAmount,
             vars.compositeDebt,
             vars.price
         );
-        vars.NICR = PrismaMath._computeNominalCR(
+        vars.NICR = ListaMath._computeNominalCR(
             _collateralAmount,
             vars.compositeDebt
         );
@@ -286,7 +290,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
         address _upperHint,
         address _lowerHint
     ) external callerOrDelegated(account) {
-        require(!PRISMA_CORE.paused(), "Trove adjustments are paused");
+        require(!LISTA_CORE.paused(), "Trove adjustments are paused");
         _adjustTrove(
             troveManager,
             account,
@@ -330,7 +334,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
         address _upperHint,
         address _lowerHint
     ) external callerOrDelegated(account) {
-        require(!PRISMA_CORE.paused(), "Withdrawals are paused");
+        require(!LISTA_CORE.paused(), "Withdrawals are paused");
         _adjustTrove(
             troveManager,
             account,
@@ -377,7 +381,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
         address _lowerHint
     ) external callerOrDelegated(account) {
         require(
-            (_collDeposit == 0 && !_isDebtIncrease) || !PRISMA_CORE.paused(),
+            (_collDeposit == 0 && !_isDebtIncrease) || !LISTA_CORE.paused(),
             "Trove adjustments are paused"
         );
         require(
@@ -554,7 +558,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
 
         _requireUserAcceptsFee(debtFee, _debtAmount, _maxFeePercentage);
 
-        debtToken.mint(PRISMA_CORE.feeReceiver(), debtFee);
+        debtToken.mint(LISTA_CORE.feeReceiver(), debtFee);
 
         emit BorrowingFeePaid(_caller, collateralToken, debtFee);
 
@@ -596,7 +600,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
          */
 
         // Get the trove's old ICR before the adjustment
-        uint256 oldICR = PrismaMath._computeCR(
+        uint256 oldICR = ListaMath._computeCR(
             _vars.coll,
             _vars.debt,
             _vars.price
@@ -703,7 +707,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
             _isDebtIncrease
         );
 
-        uint256 newICR = PrismaMath._computeCR(newColl, newDebt, _price);
+        uint256 newICR = ListaMath._computeCR(newColl, newDebt, _price);
         return newICR;
     }
 
@@ -739,7 +743,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
             ? totalColl + _collChange
             : totalColl - _collChange;
 
-        uint256 newTCR = PrismaMath._computeCR(totalColl, totalDebt);
+        uint256 newTCR = ListaMath._computeCR(totalColl, totalDebt);
         return newTCR;
     }
 
@@ -763,7 +767,7 @@ contract BorrowerOperations is PrismaBase, PrismaOwnable, DelegatedOps {
                 ++i;
             }
         }
-        amount = PrismaMath._computeCR(totalPricedCollateral, totalDebt);
+        amount = ListaMath._computeCR(totalPricedCollateral, totalDebt);
 
         return (amount, totalPricedCollateral, totalDebt);
     }
