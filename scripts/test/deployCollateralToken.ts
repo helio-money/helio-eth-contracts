@@ -6,10 +6,17 @@ export const deployCollateralToken = async () => {
   await collateralToken.deployed();
   console.log("CollateralToken deployed to:", collateralToken.address);
 
-  await hre.run("verify:verify", {
-    address: collateralToken.address,
-    constructorArguments: [],
-  });
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: collateralToken.address,
+        constructorArguments: [],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return collateralToken;
 };

@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../constants";
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -15,6 +15,24 @@ export const deployTokenLocker = async (listaCore: Contract) => {
   ]);
   await tokenLocker.deployed();
   console.log("TokenLocker deployed to:", await tokenLocker.address);
+
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: tokenLocker.address,
+        constructorArguments: [
+          listaCore.address,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          params.manager,
+          params.lockToTokenRatio,
+        ],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return tokenLocker;
 };

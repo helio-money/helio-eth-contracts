@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../constants";
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -16,6 +16,22 @@ export const deployListaToken = async (
   ]);
   await listaToken.deployed();
   console.log("ListaToken deployed to:", await listaToken.address);
+
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: listaToken.address,
+        constructorArguments: [
+          vault.address,
+          params.lzEndpoint,
+          tokenLocker.address,
+        ],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return listaToken;
 };

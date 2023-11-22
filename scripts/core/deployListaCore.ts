@@ -1,5 +1,5 @@
 import { DEPLOYMENT_PARAMS } from "../../constants";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -10,10 +10,27 @@ export const deployListaCore = async () => {
     params.owner,
     params.guardian,
     ethers.constants.AddressZero,
-    params.feeReceiver,
+    ethers.constants.AddressZero,
   ]);
   await listaCore.deployed();
   console.log("ListaCore deployed to:", listaCore.address);
+
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: listaCore.address,
+        constructorArguments: [
+          params.owner,
+          params.guardian,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+        ],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return listaCore;
 };

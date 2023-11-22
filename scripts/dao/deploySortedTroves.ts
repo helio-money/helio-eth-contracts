@@ -6,10 +6,17 @@ export const deploySortedTroves = async () => {
   await sortedTroves.deployed();
   console.log("SortedTroves deployed to:", sortedTroves.address);
 
-  await hre.run("verify:verify", {
-    address: sortedTroves.address,
-    constructorArguments: [],
-  });
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: sortedTroves.address,
+        constructorArguments: [],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return sortedTroves;
 };

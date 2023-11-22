@@ -12,7 +12,7 @@ async function main() {
       params.owner,
       params.guardian,
       ethers.constants.AddressZero,
-      params.feeReceiver,
+      ethers.constants.AddressZero,
     ],
   });
 

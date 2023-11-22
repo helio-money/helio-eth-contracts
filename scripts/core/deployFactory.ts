@@ -1,5 +1,5 @@
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 export const deployFactory = async (
   listaCore: Contract,
@@ -26,6 +26,26 @@ export const deployFactory = async (
   console.log("Updating factory in BorrowerOperations...");
   await borrowerOperations.setFactory(factory.address);
   console.log("Updated factory in BorrowerOperations...");
+
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: factory.address,
+        constructorArguments: [
+          listaCore.address,
+          ethers.constants.AddressZero,
+          stabilityPool.address,
+          borrowerOperations.address,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+        ],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return factory;
 };

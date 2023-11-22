@@ -1,20 +1,25 @@
-import { DEPLOYED_ADDRESSES } from "../../constants/deployed_addresses";
+import { Contract } from "ethers";
 import hre, { ethers } from "hardhat";
 
-const addresses = DEPLOYED_ADDRESSES[11155111];
-
-export const deployInterimAdmin = async () => {
+export const deployInterimAdmin = async (listaCore: Contract) => {
   console.log("Deploying InterimAdmin...");
   const interimAdmin = await ethers.deployContract("InterimAdmin", [
-    addresses.ListaCore,
+    listaCore.address,
   ]);
   await interimAdmin.deployed();
   console.log("InterimAdmin deployed to:", interimAdmin.address);
 
-  await hre.run("verify:verify", {
-    address: interimAdmin.address,
-    constructorArguments: [addresses.ListaCore],
-  });
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: interimAdmin.address,
+        constructorArguments: [listaCore.address],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return interimAdmin;
 };

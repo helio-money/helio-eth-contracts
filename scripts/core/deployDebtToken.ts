@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../constants";
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -36,6 +36,28 @@ export const deployDebtToken = async (
   console.log("Updating debtToken in Factory...");
   await factory.setDebtToken(debtToken.address);
   console.log("Updated debtToken in Factory...");
+
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: debtToken.address,
+        constructorArguments: [
+          params.debtTokenName,
+          params.debtTokenSymbol,
+          stabilityPool.address,
+          borrowerOperations.address,
+          listaCore.address,
+          params.lzEndpoint,
+          factory.address,
+          params.gasPool,
+          params.gasCompensation,
+        ],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return debtToken;
 };

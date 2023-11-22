@@ -1,5 +1,5 @@
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 export const deployStabilityPool = async (listaCore: Contract) => {
   console.log("Deploying StabilityPool...");
@@ -12,6 +12,24 @@ export const deployStabilityPool = async (listaCore: Contract) => {
   ]);
   await stabilityPool.deployed();
   console.log("StabilityPool deployed to:", await stabilityPool.address);
+
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: stabilityPool.address,
+        constructorArguments: [
+          listaCore.address,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+        ],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
+    }
+  }
 
   return stabilityPool;
 };
