@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../constants";
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -37,6 +37,25 @@ export const deployVault = async (
       await vault.registerNewReceiver();
       console.log("Registered new receiver in Vault...");
       break;
+    }
+  }
+
+  while (true) {
+    try {
+      await hre.run("verify:verify", {
+        address: vault.address,
+        constructorArguments: [
+          listaCore.address,
+          ethers.constants.AddressZero,
+          tokenLocker.address,
+          incentiveVoting.address,
+          stabilityPool.address,
+          params.manager,
+        ],
+      });
+      break;
+    } catch (e) {
+      console.log("retrying...");
     }
   }
 
