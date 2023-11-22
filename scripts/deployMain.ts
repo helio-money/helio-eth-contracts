@@ -55,7 +55,7 @@ export const deployMain = async () => {
   const sortedTroves = await deploySortedTroves();
   const interimAdmin = await deployInterimAdmin(listaCore);
 
-  console.log("Test Token:", collateralToken.address);
+  console.log("TestToken:", collateralToken.address);
   console.log("ListaCore:", listaCore.address);
   console.log("PriceFeed:", priceFeed.address);
   console.log("BorrowOperations:", borrowerOperations.address);
@@ -69,4 +69,5 @@ export const deployMain = async () => {
   console.log("ListaToken:", listaToken.address);
   console.log("TroveManager:", troveManager.address);
   console.log("SortedTroves:", sortedTroves.address);
+  console.log("InterimAdmin:", interimAdmin.address);
 };
