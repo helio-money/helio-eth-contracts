@@ -1,4 +1,4 @@
-import { DEPLOYMENT_PARAMS } from "../../constants";
+import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract } from "ethers";
 import hre, { ethers } from "hardhat";
 

@@ -19,7 +19,8 @@
     "test": "yarn test:ts && yarn test:js",
     "coverage": "hardhat coverage",
     "coveralls": "cat coverage/lcov.info | coveralls",
-    "addresses": "hardhat run scripts/print-addresses.ts"
+    "addresses": "hardhat run scripts/print-addresses.ts",
+    "init-contract": "hardhat run scripts/init.ts"
   },
   "keywords": [],
   "author": "",
