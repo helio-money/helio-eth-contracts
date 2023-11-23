@@ -1,4 +1,4 @@
-import { deployMain } from "./deployMain";
+import { deployMain } from "./deploy/deployMain";
 
 async function main() {
   deployMain();

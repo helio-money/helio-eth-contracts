@@ -1,4 +1,4 @@
-import { DEPLOYMENT_PARAMS } from "../../constants";
+import { DEPLOYMENT_PARAMS } from "../../../constants";
 import hre, { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
