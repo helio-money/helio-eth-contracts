@@ -417,7 +417,12 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
         if (address(_priceFeed) == address(0)) {
             _priceFeed = IPriceFeed(LISTA_CORE.priceFeed());
         }
-        return _priceFeed.fetchPrice(address(collateralToken));
+        // Instead of fetch collateralToken price(as wBETH is not supported yet), need to calculate ETH price
+        // and then multiply by exchange rate
+        return
+            IBorrowerOperations(borrowerOperationsAddress).getETHAmount(
+                _priceFeed.fetchPrice(address(0))
+            );
     }
 
     function getWeekAndDay() public view returns (uint256, uint256) {
@@ -1278,7 +1283,7 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
                 // trust that BorrowerOperations sent the collateral
             } else {
                 newColl = newColl - _collChange;
-                _sendCollateral(_receiver, _collChange);
+                _sendCollateralInETH(_receiver, _collChange);
             }
             t.coll = newColl;
         }
@@ -1311,7 +1316,7 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
         _removeStake(_borrower);
         _closeTrove(_borrower, Status.closedByOwner);
         totalActiveDebt = totalActiveDebt - debtAmount;
-        _sendCollateral(_receiver, collAmount);
+        _sendCollateralInETH(_receiver, collAmount);
         _resetState();
         emit TroveUpdated(_borrower, 0, 0, 0, TroveManagerOperation.close);
     }
@@ -1645,6 +1650,29 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
             emit CollateralSent(_account, _amount);
 
             collateralToken.safeTransfer(_account, _amount);
+        }
+    }
+
+    function _sendCollateralInETH(address _account, uint256 _amount) private {
+        if (_amount > 0) {
+            totalActiveCollateral = totalActiveCollateral - _amount;
+            emit CollateralSent(_account, _amount);
+
+            // Send collateral wBETH to BorrowerOperations and need to check if ETH withdraw is possible
+            uint256 ethAmount = IBorrowerOperations(borrowerOperationsAddress)
+                .getETHAmount(_amount);
+            if (borrowerOperationsAddress.balance >= ethAmount) {
+                // Direct ETH withdraw
+                collateralToken.safeTransfer(
+                    borrowerOperationsAddress,
+                    _amount
+                );
+                IBorrowerOperations(borrowerOperationsAddress)
+                    .withdrawCollInETH(_account, ethAmount);
+            } else {
+                // wBETH withdraw
+                collateralToken.safeTransfer(_account, _amount);
+            }
         }
     }
 
