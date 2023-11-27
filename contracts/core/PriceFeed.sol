@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.19;
 import "../interfaces/IAggregatorV3Interface.sol";
-import "../interfaces/IwBETH.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../dependencies/ListaMath.sol";
 import "../dependencies/ListaOwnable.sol";
@@ -67,18 +66,12 @@ contract PriceFeed is ListaOwnable {
     // Maximum deviation allowed between two consecutive Chainlink oracle prices. 18-digit precision.
     uint256 public constant MAX_PRICE_DEVIATION_FROM_PREVIOUS_ROUND = 5e17; // 50%
 
-    IwBETH public immutable wBETH;
     // State ------------------------------------------------------------------------------------------------------------
 
     mapping(address => OracleRecord) public oracleRecords;
     mapping(address => PriceRecord) public priceRecords;
 
-    constructor(
-        address _listaCore,
-        address ethFeed,
-        address _wBETH
-    ) ListaOwnable(_listaCore) {
-        wBETH = IwBETH(_wBETH);
+    constructor(address _listaCore, address ethFeed) ListaOwnable(_listaCore) {
         setOracle(address(0), ethFeed, 3600, 0, 0, false);
     }
 
