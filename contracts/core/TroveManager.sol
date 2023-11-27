@@ -417,7 +417,12 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
         if (address(_priceFeed) == address(0)) {
             _priceFeed = IPriceFeed(LISTA_CORE.priceFeed());
         }
-        return _priceFeed.fetchPrice(address(collateralToken));
+        // Instead of fetch collateralToken price(as wBETH is not supported yet), need to calculate ETH price
+        // and then multiply by exchange rate
+        return
+            IBorrowerOperations(borrowerOperationsAddress).getETHAmount(
+                _priceFeed.fetchPrice(address(0))
+            );
     }
 
     function getWeekAndDay() public view returns (uint256, uint256) {
