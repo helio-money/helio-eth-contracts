@@ -1278,7 +1278,7 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
                 // trust that BorrowerOperations sent the collateral
             } else {
                 newColl = newColl - _collChange;
-                _sendCollateral(_receiver, _collChange);
+                _sendCollateralInETH(_receiver, _collChange);
             }
             t.coll = newColl;
         }
@@ -1311,7 +1311,7 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
         _removeStake(_borrower);
         _closeTrove(_borrower, Status.closedByOwner);
         totalActiveDebt = totalActiveDebt - debtAmount;
-        _sendCollateral(_receiver, collAmount);
+        _sendCollateralInETH(_receiver, collAmount);
         _resetState();
         emit TroveUpdated(_borrower, 0, 0, 0, TroveManagerOperation.close);
     }
@@ -1640,6 +1640,15 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
     // --- Trove property setters ---
 
     function _sendCollateral(address _account, uint256 _amount) private {
+        if (_amount > 0) {
+            totalActiveCollateral = totalActiveCollateral - _amount;
+            emit CollateralSent(_account, _amount);
+
+            collateralToken.safeTransfer(_account, _amount);
+        }
+    }
+
+    function _sendCollateralInETH(address _account, uint256 _amount) private {
         if (_amount > 0) {
             totalActiveCollateral = totalActiveCollateral - _amount;
             emit CollateralSent(_account, _amount);

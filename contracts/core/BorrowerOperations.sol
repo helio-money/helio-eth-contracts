@@ -81,6 +81,8 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         adjustTrove
     }
 
+    event Rebalanced(uint256 ethAmount, uint256 wBETHAmount);
+
     event BorrowingFeePaid(
         address indexed borrower,
         IERC20 collateralToken,
@@ -101,15 +103,20 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         uint256 _minNetDebt,
         uint256 _gasCompensation
     ) ListaOwnable(_listaCore) ListaBase(_gasCompensation) {
-        setFactory(_factory);
         wBETH = IwBETH(_wBETH);
-        referral = _referral;
+        setFactory(_factory);
+        setReferral(_referral);
         setDebtToken(_debtTokenAddress);
         _setMinNetDebt(_minNetDebt);
     }
 
     function setFactory(address _factory) public onlyOwner {
+        // Set referral address for wBETH deposit
         factory = _factory;
+    }
+
+    function setReferral(address _referral) public onlyOwner {
+        referral = _referral;
     }
 
     function setDebtToken(address _debtTokenAddress) public onlyOwner {
@@ -123,6 +130,14 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
     function _setMinNetDebt(uint256 _minNetDebt) internal {
         require(_minNetDebt > 0);
         minNetDebt = _minNetDebt;
+    }
+
+    // Convert ETH into wBETH daily
+    function rebalance(uint256 amount) external onlyOwner {
+        require(address(this).balance >= amount, "Not enough ETH");
+        wBETH.deposit{value: amount}(referral);
+
+        emit Rebalanced(amount, _getCollateralAmount(amount));
     }
 
     function configureCollateral(
@@ -289,7 +304,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
             isRecoveryMode
         );
 
-        // Move the collateral to the Trove Manager - collateral will be wBETH and already approved in configureCollateral
+        // Move the collateral to the Trove Manager - collateral will be wBETH
         collateralToken.safeTransfer(address(troveManager), _collateralAmount);
 
         //  and mint the DebtAmount to the caller and gas compensation for Gas Pool
@@ -494,13 +509,11 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         }
 
         // If we are incrasing collateral, send tokens to the trove manager prior to adjusting the trove
-        if (vars.isCollIncrease) {
-            if (wBETH.balanceOf(address(this)) < vars.collChange) {}
+        if (vars.isCollIncrease)
             collateralToken.safeTransfer(
                 address(troveManager),
                 vars.collChange
             );
-        }
 
         (vars.newColl, vars.newDebt, vars.stake) = troveManager
             .updateTroveFromAdjustment(
@@ -564,10 +577,9 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
 
     // Withdraw in ETH
     function withdrawCollInETH(address receiver, uint256 amount) external {
-        // Check if msg.sender is wBETH TroveManager
         IERC20 collateralToken = troveManagersData[ITroveManager(msg.sender)]
             .collateralToken;
-
+        // Check if msg.sender is wBETH TroveManager
         require(
             address(collateralToken) == address(wBETH),
             "Not wBETH TroveManager"
@@ -588,7 +600,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
 
     function getETHAmount(
         uint256 collateralAmount
-    ) public view returns (uint256) {
+    ) external view returns (uint256) {
         return
             (collateralAmount * wBETH.exchangeRate()) /
             WBETH_EXCHANGE_RATE_UNIT;
