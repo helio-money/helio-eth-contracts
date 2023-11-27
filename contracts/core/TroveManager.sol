@@ -1644,7 +1644,21 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
             totalActiveCollateral = totalActiveCollateral - _amount;
             emit CollateralSent(_account, _amount);
 
-            collateralToken.safeTransfer(_account, _amount);
+            // Send collateral wBETH to BorrowerOperations and need to check if ETH withdraw is possible
+            uint256 ethAmount = IBorrowerOperations(borrowerOperationsAddress)
+                .getETHAmount(_amount);
+            if (borrowerOperationsAddress.balance >= ethAmount) {
+                // Direct ETH withdraw
+                collateralToken.safeTransfer(
+                    borrowerOperationsAddress,
+                    _amount
+                );
+                IBorrowerOperations(borrowerOperationsAddress)
+                    .withdrawCollInETH(_account, ethAmount);
+            } else {
+                // wBETH withdraw
+                collateralToken.safeTransfer(_account, _amount);
+            }
         }
     }
 

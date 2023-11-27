@@ -131,4 +131,10 @@ interface IBorrowerOperations {
     function troveManagersData(
         address
     ) external view returns (address collateralToken, uint16 index);
+
+    function getETHAmount(
+        uint256 collateralAmount
+    ) external view returns (uint256);
+
+    function withdrawCollInETH(address receiver, uint256 amount) external;
 }
