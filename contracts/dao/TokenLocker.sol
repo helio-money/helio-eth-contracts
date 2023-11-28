@@ -30,7 +30,7 @@ contract TokenLocker is ListaOwnable, SystemStart {
     // cannot be violated or the system could break due to overflow.
     uint256 public immutable lockToTokenRatio;
 
-    IListaToken public immutable lockToken;
+    IListaToken public lockToken;
     IIncentiveVoting public incentiveVoter;
     IListaCore public immutable listaCore;
     address public immutable deploymentManager;
@@ -112,7 +112,7 @@ contract TokenLocker is ListaOwnable, SystemStart {
         address _manager,
         uint256 _lockToTokenRatio
     ) SystemStart(_listaCore) ListaOwnable(_listaCore) {
-        lockToken = _token;
+        setLockToken(_token);
         setIncentiveVoter(_voter);
         listaCore = IListaCore(_listaCore);
         deploymentManager = _manager;
@@ -123,6 +123,10 @@ contract TokenLocker is ListaOwnable, SystemStart {
     modifier notFrozen(address account) {
         require(accountLockData[account].frozen == 0, "Lock is frozen");
         _;
+    }
+
+    function setLockToken(IListaToken _token) public onlyOwner {
+        lockToken = _token;
     }
 
     function setIncentiveVoter(IIncentiveVoting _voter) public onlyOwner {
