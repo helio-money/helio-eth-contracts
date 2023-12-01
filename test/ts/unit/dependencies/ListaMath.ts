@@ -1,8 +1,8 @@
-import { ListaMathHelper } from "../../../../typechain-types";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
+import { ListaMathHelper } from "../../../../typechain-types";
 
 describe("ListaMath Library", async () => {
   let listaMatchLib: ListaMathHelper;
@@ -27,9 +27,9 @@ describe("ListaMath Library", async () => {
     });
 
     it("Return the minimum of min uint256 and max uint256", async () => {
-      expect(await listaMatchLib._min(0, ethers.constants.MaxUint256)).to.equal(
-        0
-      );
+      expect(
+        await listaMatchLib._min(0, ethers.constants.MaxUint256)
+      ).to.equal(0);
     });
   });
 
@@ -47,9 +47,9 @@ describe("ListaMath Library", async () => {
     });
 
     it("Return the maximum of min uint256 and max uint256", async () => {
-      expect(await listaMatchLib._max(0, ethers.constants.MaxUint256)).to.equal(
-        ethers.constants.MaxUint256
-      );
+      expect(
+        await listaMatchLib._max(0, ethers.constants.MaxUint256)
+      ).to.equal(ethers.constants.MaxUint256);
     });
   });
 
@@ -102,7 +102,9 @@ describe("ListaMath Library", async () => {
     describe("overflow", async () => {
       it("Shouldn't overflow if the product of two numbers is less than and equal to MaxUint256 - 0.5 eth", async () => {
         // PRODUCT = x * y, precision = 1e36
-        const PRODUCT = ethers.constants.MaxUint256.sub(parseEther("0.5"));
+        const PRODUCT = ethers.constants.MaxUint256.sub(
+          parseEther("0.5")
+        );
         const x = PRODUCT.div(10);
         const y = 10;
         const res = PRODUCT.div(parseEther("1"));
@@ -112,9 +114,9 @@ describe("ListaMath Library", async () => {
 
       it("Should overflow if the product of two numbers is greater than MaxUint256 - 0.5 eth", async () => {
         // PRODUCT = x * y, precision = 1e36
-        const PRODUCT = ethers.constants.MaxUint256.sub(parseEther("0.5")).add(
-          1
-        );
+        const PRODUCT = ethers.constants.MaxUint256.sub(
+          parseEther("0.5")
+        ).add(1);
         const x = PRODUCT.div(10).add(parseEther("1"));
         const y = 10;
         await expect(listaMatchLib.decMul(x, y)).to.rejected;
@@ -128,14 +130,36 @@ describe("ListaMath Library", async () => {
         const base = parseEther("2");
         const minutes = 3;
         const res = parseEther("8");
-        expect(await listaMatchLib._decPow(base, minutes)).to.equal(res);
+        expect(await listaMatchLib._decPow(base, minutes)).to.equal(
+          res
+        );
       });
 
       it("Return the power of the decimal base", async () => {
         const base = parseEther("2.5");
         const minutes = 3;
         const res = parseEther("15.625");
-        expect(await listaMatchLib._decPow(base, minutes)).to.equal(res);
+        expect(await listaMatchLib._decPow(base, minutes)).to.equal(
+          res
+        );
+      });
+
+      it("If pow is greater than 525600000, treat it as 525600000", async () => {
+        const base = parseEther("0.5");
+        const minutes = 525600001;
+        const res = await listaMatchLib._decPow(base, 525600000);
+        expect(await listaMatchLib._decPow(base, minutes)).to.equal(
+          res
+        );
+      });
+
+      it("Return 1e18 if the power is 0", async () => {
+        const base = parseEther("2");
+        const minutes = 0;
+        const res = parseEther("1");
+        expect(await listaMatchLib._decPow(base, minutes)).to.equal(
+          res
+        );
       });
     });
 
@@ -151,13 +175,16 @@ describe("ListaMath Library", async () => {
         const minutes = 136; // 2^136 * 1e36 = 8.711228593176025e76
         // const res = BigNumber.from(2).pow(255);
         // expect(await listaMatchLib._decPow(base, minutes)).to.equal(res);
-        await expect(listaMatchLib._decPow(base, minutes)).not.to.rejected;
+        await expect(listaMatchLib._decPow(base, minutes)).not.to
+          .rejected;
       });
 
       it("Should underflow if the minutes has decimal part", async () => {
         const base = parseEther("2.5");
         const minutes = 1.5;
-        await expect(listaMatchLib._decPow(base, minutes)).to.rejectedWith(
+        await expect(
+          listaMatchLib._decPow(base, minutes)
+        ).to.rejectedWith(
           `underflow [ See: https://links.ethers.org/v5-errors-NUMERIC_FAULT-underflow ] (fault="underflow", operation="BigNumber.from", value=1.5, code=NUMERIC_FAULT, version=bignumber/5.7.0)`
         );
       });
@@ -169,21 +196,27 @@ describe("ListaMath Library", async () => {
       const a = parseEther("0.5");
       const b = parseEther("3");
       const res = parseEther("2.5");
-      expect(await listaMatchLib._getAbsoluteDifference(a, b)).to.equal(res);
+      expect(await listaMatchLib._getAbsoluteDifference(a, b)).to.equal(
+        res
+      );
     });
 
     it("Return the absolute difference of two numbers in reverse order", async () => {
       const a = parseEther("3");
       const b = parseEther("0.5");
       const res = parseEther("2.5");
-      expect(await listaMatchLib._getAbsoluteDifference(a, b)).to.equal(res);
+      expect(await listaMatchLib._getAbsoluteDifference(a, b)).to.equal(
+        res
+      );
     });
 
     it("Return the absolute difference of two same numbers", async () => {
       const a = parseEther("1");
       const b = parseEther("1");
       const res = parseEther("0");
-      expect(await listaMatchLib._getAbsoluteDifference(a, b)).to.equal(res);
+      expect(await listaMatchLib._getAbsoluteDifference(a, b)).to.equal(
+        res
+      );
     });
   });
 
@@ -193,14 +226,18 @@ describe("ListaMath Library", async () => {
         const coll = parseEther("3");
         const debt = parseEther("0.5");
         const res = parseEther("600"); // 3 / 0.5 * 1e20
-        expect(await listaMatchLib._computeNominalCR(coll, debt)).to.equal(res);
+        expect(
+          await listaMatchLib._computeNominalCR(coll, debt)
+        ).to.equal(res);
       });
 
       it("Return the MaxUint256 if the denominator is 0", async () => {
         const coll = parseEther("3");
         const debt = parseEther("0");
         const res = BigNumber.from(ethers.constants.MaxUint256);
-        expect(await listaMatchLib._computeNominalCR(coll, debt)).to.equal(res);
+        expect(
+          await listaMatchLib._computeNominalCR(coll, debt)
+        ).to.equal(res);
       });
     });
 
@@ -209,14 +246,18 @@ describe("ListaMath Library", async () => {
         const coll = BigNumber.from(1); // 1
         const debt = parseEther("100"); // 1e20
         const res = BigNumber.from(1); // 1
-        expect(await listaMatchLib._computeNominalCR(coll, debt)).to.equal(res);
+        expect(
+          await listaMatchLib._computeNominalCR(coll, debt)
+        ).to.equal(res);
       });
 
       it("Should truncate to 0 if the denominator is 1e20 times greater than the numerator", async () => {
         const coll = BigNumber.from(1); // 1
         const debt = parseEther("100").add(1); // 1e20 + 1
         const res = BigNumber.from(0); // truncate to 0
-        expect(await listaMatchLib._computeNominalCR(coll, debt)).to.equal(res);
+        expect(
+          await listaMatchLib._computeNominalCR(coll, debt)
+        ).to.equal(res);
       });
     });
 
@@ -225,13 +266,18 @@ describe("ListaMath Library", async () => {
         const coll = ethers.constants.MaxUint256.div(parseEther("100"));
         const debt = coll;
         const res = parseEther("100"); // 1e20
-        expect(await listaMatchLib._computeNominalCR(coll, debt)).to.equal(res);
+        expect(
+          await listaMatchLib._computeNominalCR(coll, debt)
+        ).to.equal(res);
       });
 
       it("Should overflow if the numerator is greater than MaxUint256 / 1e20", async () => {
-        const coll = ethers.constants.MaxUint256.div(parseEther("100")).add(1);
+        const coll = ethers.constants.MaxUint256.div(
+          parseEther("100")
+        ).add(1);
         const debt = coll;
-        await expect(listaMatchLib._computeNominalCR(coll, debt)).to.rejected;
+        await expect(listaMatchLib._computeNominalCR(coll, debt)).to
+          .rejected;
       });
     });
   });
@@ -334,7 +380,10 @@ describe("ListaMath Library", async () => {
         const debt = parseEther("0.5");
         const res = BigNumber.from(6); // 3 / 0.5
         expect(
-          await listaMatchLib["_computeCR(uint256,uint256)"](coll, debt)
+          await listaMatchLib["_computeCR(uint256,uint256)"](
+            coll,
+            debt
+          )
         ).to.equal(res);
       });
 
@@ -343,7 +392,10 @@ describe("ListaMath Library", async () => {
         const debt = parseEther("0");
         const res = BigNumber.from(ethers.constants.MaxUint256);
         expect(
-          await listaMatchLib["_computeCR(uint256,uint256)"](coll, debt)
+          await listaMatchLib["_computeCR(uint256,uint256)"](
+            coll,
+            debt
+          )
         ).to.equal(res);
       });
     });
@@ -354,7 +406,10 @@ describe("ListaMath Library", async () => {
         const debt = parseEther("1");
         const res = BigNumber.from(1); // 1
         expect(
-          await listaMatchLib["_computeCR(uint256,uint256)"](coll, debt)
+          await listaMatchLib["_computeCR(uint256,uint256)"](
+            coll,
+            debt
+          )
         ).to.equal(res);
       });
 
@@ -363,7 +418,10 @@ describe("ListaMath Library", async () => {
         const debt = parseEther("1");
         const res = BigNumber.from(1); // 1
         expect(
-          await listaMatchLib["_computeCR(uint256,uint256)"](coll, debt)
+          await listaMatchLib["_computeCR(uint256,uint256)"](
+            coll,
+            debt
+          )
         ).to.equal(res);
       });
 
@@ -372,7 +430,10 @@ describe("ListaMath Library", async () => {
         const debt = parseEther("1");
         const res = BigNumber.from(0); // truncate to 0
         expect(
-          await listaMatchLib["_computeCR(uint256,uint256)"](coll, debt)
+          await listaMatchLib["_computeCR(uint256,uint256)"](
+            coll,
+            debt
+          )
         ).to.equal(res);
       });
     });
@@ -383,7 +444,10 @@ describe("ListaMath Library", async () => {
         const debt = BigNumber.from(1);
         const res = ethers.constants.MaxUint256;
         expect(
-          await listaMatchLib["_computeCR(uint256,uint256)"](coll, debt)
+          await listaMatchLib["_computeCR(uint256,uint256)"](
+            coll,
+            debt
+          )
         ).to.equal(res);
       });
     });
