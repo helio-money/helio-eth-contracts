@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
-import type { ListaCore, PriceFeed, MockAggregator, MockInternalPriceFeed } from "../../../../typechain-types";
 import { BigNumber, Signer } from "ethers";
+import { ethers } from "hardhat";
+import type { ListaCore, MockAggregator, MockInternalPriceFeed, PriceFeed } from "../../../../typechain-types";
 
 describe("PriceFeed", () => {
   const ZERO_ADDRESS = ethers.constants.AddressZero;
