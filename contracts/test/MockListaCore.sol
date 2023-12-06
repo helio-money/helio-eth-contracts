@@ -7,6 +7,7 @@ contract MockListaCore {
     address public guardian;
     uint256 public startTime;
     bool public paused;
+    address public feeReceiver;
 
     function setOwner(address _owner) public {
         owner = _owner;
@@ -24,4 +25,7 @@ contract MockListaCore {
         paused = _paused;
     }
 
+    function setFeeReceiver(address value) public {
+        feeReceiver = value;
+    }
 }

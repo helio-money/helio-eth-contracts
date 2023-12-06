@@ -1,21 +1,20 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import type { ListaCore } from "../typechain-types";
 import { Signer } from "ethers";
+import { ListaCore } from "../../../../typechain-types";
+import { WEEK, ZERO_ADDRESS } from "../../utils";
+
+const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 describe("ListaCore", () => {
   const testGuardianAddress = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC";
   const testPriceFeedAddress = "0xDDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd";
-  const ONE_DAY_SECONDS = 24 * 3600;
-  const ONE_WEEK_SECONDS = 7 * ONE_DAY_SECONDS;
-  const ZERO_ADDRESS = ethers.constants.AddressZero;
 
   let listaCore: ListaCore;
   let owner: Signer;
   let feeReceiver: Signer;
   let user: Signer;
   let user2: Signer;
-
   beforeEach(async () => {
     [owner, feeReceiver, user, user2] = await ethers.getSigners();
 
@@ -24,17 +23,16 @@ describe("ListaCore", () => {
       testGuardianAddress,
       testPriceFeedAddress,
       await feeReceiver.getAddress()
-    ]);
+    ]) as ListaCore;
     await listaCore.deployed();
   });
 
   describe("Deployment", async () => {
     it("Should OK when construct", async () => {
       const tx = listaCore.deployTransaction;
-      const block = await ethers.provider.getBlock(tx.block);
 
       expect(await listaCore.owner()).to.be.equal(await owner.getAddress());
-      expect(await listaCore.startTime()).to.be.equal(Math.floor(block.timestamp / ONE_WEEK_SECONDS) * ONE_WEEK_SECONDS);
+      expect(await listaCore.startTime()).to.be.equal(Math.floor(await time.latest() / WEEK) * WEEK);
       expect(await listaCore.feeReceiver()).to.be.equal(await feeReceiver.getAddress());
       expect(await listaCore.priceFeed()).to.be.equal(testPriceFeedAddress);
       expect(await listaCore.pendingOwner()).to.be.equal(ZERO_ADDRESS);
@@ -88,8 +86,7 @@ describe("ListaCore", () => {
       const newOwnerAddress = await user.getAddress();
       const tx = await listaCore.commitTransferOwnership(newOwnerAddress);
       const delay = Number(await listaCore.OWNERSHIP_TRANSFER_DELAY());
-      const block = await ethers.provider.getBlock(tx.block);
-      const timestamp = Number(block.timestamp);
+      const timestamp = await time.latest();
       const deadline = timestamp + delay;
 
       expect(await listaCore.pendingOwner()).to.be.equal(await user.getAddress());
@@ -112,7 +109,7 @@ describe("ListaCore", () => {
 
       await expect(listaCore.connect(user).acceptTransferOwnership()).to.be.revertedWith("Deadline not passed");
 
-      await ethers.provider.send("evm_increaseTime", [deadline.toNumber() + 1]);
+      await time.increase(deadline.toNumber() + 1);
       const tx = await listaCore.connect(user).acceptTransferOwnership();
 
       expect(await listaCore.owner()).to.be.equal(newOwnerAddress);
@@ -138,7 +135,6 @@ describe("ListaCore", () => {
     });
 
     it("Should revert after revokeTransferOwnership", async () => {
-      const oldOwnerAddress = await owner.getAddress();
       const newOwnerAddress = await user.getAddress();
       await listaCore.commitTransferOwnership(newOwnerAddress);
 
@@ -187,8 +183,7 @@ describe("ListaCore", () => {
     });
 
     it("Should revert if param is paused, call not from guardian", async () => {
-      const fakeGuadian = user;
-      await listaCore.setGuardian(await fakeGuadian.getAddress());
+      await listaCore.setGuardian(await user.getAddress());
 
       await expect(listaCore.connect(user2).setPaused(true)).to.be.revertedWith("Unauthorized");
     });
@@ -201,8 +196,7 @@ describe("ListaCore", () => {
     });
 
     it("Should revert if param is not paused, call not from guardian", async () => {
-      const fakeGuadian = user;
-      await listaCore.setGuardian(await fakeGuadian.getAddress());
+      await listaCore.setGuardian(await user.getAddress());
 
       await expect(listaCore.connect(user2).setPaused(false)).to.be.revertedWith("Unauthorized");
     });

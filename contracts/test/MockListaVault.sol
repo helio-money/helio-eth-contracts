@@ -12,11 +12,14 @@ contract MockListaVault {
         emissionAmount = amount;
     }
 
-    function allocateNewEmissions(uint256) external returns (uint256) {
+    function allocateNewEmissions(uint256) external view returns (uint256) {
         return emissionAmount;
     }
 
-    function vaultClaimReward(InternalStabilityPool stabilityPool, address claimant) public returns (uint256){
+    function vaultClaimReward(
+        InternalStabilityPool stabilityPool,
+        address claimant
+    ) public returns (uint256) {
         return stabilityPool.vaultClaimReward(claimant, address(0));
     }
 }

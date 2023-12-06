@@ -1,13 +1,14 @@
 import { expect } from "chai";
-import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
+import { BigNumber, Signer } from "ethers";
 import type { ListaCore, MockAggregator, MockInternalPriceFeed, PriceFeed } from "../../../../typechain-types";
+import { ZERO_ADDRESS, abi, encodeCallData } from "../../utils";
+
+const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 describe("PriceFeed", () => {
-  const ZERO_ADDRESS = ethers.constants.AddressZero;
   const FAKE_GUARDIAN_ADDRESS = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC";
   const FAKE_TOKEN_ADDRESS = "0xDDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd";
-  const abi = new ethers.utils.AbiCoder();
 
   let listaCore: ListaCore;
   let priceFeed: PriceFeed;
@@ -18,7 +19,6 @@ describe("PriceFeed", () => {
   let user1: Signer;
   let user2: Signer;
   let feeReceiver: Signer;
-
   beforeEach(async () => {
     [owner, user1, user2, feeReceiver] = await ethers.getSigners();
 
@@ -45,11 +45,6 @@ describe("PriceFeed", () => {
     ]) as MockInternalPriceFeed;
     await internalPriceFeed.deployed();
   });
-
-  // TODO: move to test/ts/utils/contract.ts
-  const encodeCallData = (name: string, types: string[], values: any[]) => {
-    return `${ethers.utils.id(name).slice(0, 10)}${abi.encode(types, values).slice(2)}`;
-  }
 
   describe("Deployment", () => {
     it("Should OK when read ListaOwnable", async () => {
@@ -304,12 +299,11 @@ describe("PriceFeed", () => {
       const timestamp = 1701180691;
       const roundId = 7;
       const tx = await internalPriceFeed.storePrice(FAKE_TOKEN_ADDRESS, price, timestamp, roundId);
-      const block = await ethers.provider.getBlock(tx.blockNumber);
 
       const priceRecord = await internalPriceFeed.priceRecords(FAKE_TOKEN_ADDRESS);
       expect(priceRecord.scaledPrice).to.be.equal(price);
       expect(priceRecord.timestamp).to.be.equal(timestamp);
-      expect(priceRecord.lastUpdated).to.be.equal(block.timestamp);
+      expect(priceRecord.lastUpdated).to.be.equal(await time.latest());
       expect(priceRecord.roundId).to.be.equal(roundId);
 
       await expect(tx).to.emit(internalPriceFeed, "PriceRecordUpdated").withArgs(FAKE_TOKEN_ADDRESS, price);
@@ -319,7 +313,6 @@ describe("PriceFeed", () => {
       const timeout = await internalPriceFeed.RESPONSE_TIMEOUT_BUFFER();
       let block = await ethers.provider.getBlock("latest");
 
-      const currentTimestampAndTimeout = timeout.add(block.timestamp);
       const priceTimestamp = BigNumber.from(1701180691);
       const staledElapse = BigNumber.from(block.timestamp).sub(priceTimestamp);
 
@@ -427,8 +420,7 @@ describe("PriceFeed", () => {
         2
       );
 
-      await ethers.provider.send("evm_setNextBlockTimestamp", [startTimestamp.add(100).toNumber()]);
-      await ethers.provider.send("evm_mine", []);
+      await time.increaseTo(startTimestamp.add(10).toNumber());
 
       let priceRecord = await internalPriceFeed.priceRecords(ZERO_ADDRESS);
       expect(priceRecord.roundId).to.be.equal(2);
@@ -500,8 +492,7 @@ describe("PriceFeed", () => {
     it("Should revert if price is staled with setOracle", async () => {
       const priceRecord = await internalPriceFeed.priceRecords(ZERO_ADDRESS);
 
-      await ethers.provider.send("evm_setNextBlockTimestamp", [priceRecord.timestamp + 3600 + 3600]);
-      await ethers.provider.send("evm_mine", []);
+      await time.increaseTo(priceRecord.timestamp + 3600 * 2);
 
       await aggregator.setUpdatedAt(priceRecord.timestamp);
       await aggregator.setPriceIsAlwaysUpToDate(false);
@@ -522,7 +513,6 @@ describe("PriceFeed", () => {
     });
 
     it("Should revert if price lastUpdated is 0", async () => {
-      const priceRecord = await priceFeed.priceRecords(FAKE_TOKEN_ADDRESS);
       await expect(priceFeed.fetchPrice(FAKE_TOKEN_ADDRESS))
         .to.revertedWithCustomError(priceFeed, "PriceFeed__UnknownFeedError")
         .withArgs(FAKE_TOKEN_ADDRESS);
@@ -531,8 +521,7 @@ describe("PriceFeed", () => {
     it("Should revert if updated == false and price is staled", async () => {
       const priceRecord = await priceFeed.priceRecords(ZERO_ADDRESS);
 
-      await ethers.provider.send("evm_setNextBlockTimestamp", [priceRecord.timestamp + 3600 + 3600]);
-      await ethers.provider.send("evm_mine", []);
+      await time.increaseTo(priceRecord.timestamp + 3600 * 2);
       await aggregator.setUpdatedAt(priceRecord.timestamp);
       await aggregator.setPriceIsAlwaysUpToDate(false);
 

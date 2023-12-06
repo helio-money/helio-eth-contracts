@@ -1,25 +1,22 @@
-import {expect} from "chai";
-import {ethers} from "hardhat";
-import {BigNumber, Contract, Signer} from "ethers";
-import {InternalStabilityPool, MockDebtToken, MockListaCore} from "../../../../typechain-types";
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { BigNumber, Contract, Signer } from "ethers";
+import { InternalStabilityPool, MockDebtToken, MockListaCore } from "../../../../typechain-types";
+import { DAY, ETHER, HOUR, WEEK, ZERO, _1E18, abi, encodeCallData } from "../../utils";
 
-const {time} = require('@nomicfoundation/hardhat-network-helpers');
+const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 describe("StabilityPool", () => {
   const fakeFactory = "0xDDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd";
   const fakeLiquidationManager = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
   const emissionId = 0;
-  const initialP = ethers.utils.parseEther("1");
-  const initialG = BigNumber.from("0");
+  const initialP = _1E18;
+  const initialG = ZERO;
   const scaleFactor = BigNumber.from("10").pow(9);
 
-  const ONE_HOUR = 3600;
-  const ONE_DAY = 24 * ONE_HOUR;
-  const ONE_WEEK = 7 * ONE_DAY;
-  const REWARD_DURATION = ONE_WEEK;
-  const SUNSET_DURATION = 180 * ONE_DAY;
-  const DECIMAL_PRECISION = ethers.utils.parseEther("1");
-  const abi = new ethers.utils.AbiCoder();
+  const REWARD_DURATION = WEEK;
+  const SUNSET_DURATION = 180 * DAY;
+  const DECIMAL_PRECISION = ETHER;
 
   let listaCore: MockListaCore;
   let stabilityPool: InternalStabilityPool;
@@ -48,7 +45,7 @@ describe("StabilityPool", () => {
     const startTime = await time.latest();
     await listaCore.setStartTime(startTime);
 
-    await time.setNextBlockTimestamp(startTime + 2 * ONE_DAY);
+    await time.setNextBlockTimestamp(startTime + 2 * DAY);
     stabilityPool = await ethers.deployContract("InternalStabilityPool", [
       listaCore.address,
       debtToken.address,
@@ -58,10 +55,6 @@ describe("StabilityPool", () => {
     ]) as InternalStabilityPool;
     await stabilityPool.deployed();
   });
-
-  const encodeCallData = (name: string, types: string[], values: any[]) => {
-    return `${ethers.utils.id(name).slice(0, 10)}${abi.encode(types, values).slice(2)}`;
-  }
 
   const prepareCollateral = async (token: Contract) => {
     await stabilityPool.setFactory(await owner.getAddress());
@@ -80,12 +73,12 @@ describe("StabilityPool", () => {
     it("Should OK after deploy", async () => {
       expect(await stabilityPool.LISTA_CORE()).to.be.equal(listaCore.address);
       expect(await stabilityPool.periodFinish()).to.be.equal(await time.latest() - 1);
-      expect(await listaCore.startTime()).to.be.equal(await time.latest() - 2 * ONE_DAY);
+      expect(await listaCore.startTime()).to.be.equal(await time.latest() - 2 * DAY);
 
-      await time.increase(17 * ONE_DAY);
+      await time.increase(17 * DAY);
       const startTime = await listaCore.startTime();
       const now = await time.latest();
-      const expected = Math.floor((now - startTime.toNumber()) / ONE_WEEK);
+      const expected = Math.floor((now - startTime.toNumber()) / WEEK);
       const week = await stabilityPool.getWeek();
       expect(week).to.be.equal(expected);
 
@@ -100,7 +93,7 @@ describe("StabilityPool", () => {
     it("_vestedEmissions", async () => {
       const rewardRate = 200;
       await stabilityPool.setRewardRate(rewardRate);
-      let periodFinish = await stabilityPool.periodFinish() + ONE_WEEK;
+      let periodFinish = await stabilityPool.periodFinish() + WEEK;
 
       // 1. lastUpdateCached >= updated
       await stabilityPool.setPeriodFinish(periodFinish);
@@ -155,7 +148,7 @@ describe("StabilityPool", () => {
 
       await listaVault.setEmissionAmount(fakeEmissionAmount);
 
-      let lastUpdateWeek = periodFinish.sub(startTime).div(ONE_WEEK);
+      let lastUpdateWeek = periodFinish.sub(startTime).div(WEEK);
       let week = await stabilityPool.getWeek();
       expect(week).to.be.equal(0);
       expect(lastUpdateWeek).to.be.equal(0);
@@ -175,10 +168,10 @@ describe("StabilityPool", () => {
       let lastLastUpdate = BigNumber.from(await stabilityPool.lastUpdate());
 
       // 2nd and in the same week
-      await time.increaseTo(await time.latest() + ONE_DAY);
+      await time.increaseTo(await time.latest() + DAY);
 
       await stabilityPool.triggerRewardIssuance();
-      const innterLastUpdateWeekValue = lastPeriodFinish.sub(startTime).div(ONE_WEEK)
+      const innterLastUpdateWeekValue = lastPeriodFinish.sub(startTime).div(WEEK)
       expect(innterLastUpdateWeekValue).to.be.equal(1);
       expect(await stabilityPool.getWeek()).to.be.equal(0);
 
@@ -187,7 +180,7 @@ describe("StabilityPool", () => {
       lastLastUpdate = BigNumber.from(await stabilityPool.lastUpdate());
 
       // 3rd and in the next week
-      await time.increaseTo(lastPeriodFinish.add(2 * ONE_DAY).toNumber());
+      await time.increaseTo(lastPeriodFinish.add(2 * DAY).toNumber());
       fakeEmissionAmount = BigNumber.from("4000000");
       await listaVault.setEmissionAmount(fakeEmissionAmount);
 
@@ -202,11 +195,11 @@ describe("StabilityPool", () => {
       lastLastUpdate = BigNumber.from(await stabilityPool.lastUpdate());
 
       // 4th and in the same week
-      await time.increaseTo(await time.latest() + ONE_HOUR);
+      await time.increaseTo(await time.latest() + HOUR);
       await stabilityPool.triggerRewardIssuance();
       expect(await stabilityPool.getWeek()).to.be.equal(1);
       expect(await stabilityPool.getWeek()).to.be.lt(lastLastUpdate);
-      await time.increaseTo(await time.latest() + ONE_DAY - 1);
+      await time.increaseTo(await time.latest() + DAY - 1);
     });
 
     it("_accrueDepositorCollateralGain", async () => {
@@ -224,9 +217,9 @@ describe("StabilityPool", () => {
       const initialGains = BigNumber.from("1000000000");
       await stabilityPool.setCollateralGains(depositor, 0, initialGains);
       await prepareCollateral(erc20Token);
-      const fakeAccountDeposit = {amount: ethers.utils.parseEther("0.78"), timestamp: await time.latest()};
+      const fakeAccountDeposit = { amount: ethers.utils.parseEther("0.78"), timestamp: await time.latest() };
       await stabilityPool.setAccountDeposits(depositor, fakeAccountDeposit);
-      const snapshots = {P: initialP, G: 0, scale: 0, epoch: 0};
+      const snapshots = { P: initialP, G: 0, scale: 0, epoch: 0 };
       await stabilityPool.setDepositSnapshots(depositor, snapshots);
       const S = ethers.utils.parseEther("123")
       const nextS = ethers.utils.parseEther("78")
@@ -247,14 +240,14 @@ describe("StabilityPool", () => {
       const secondPortion = nextS.div(scaleFactor);
       expect(await stabilityPool.collateralGainsByDepositor(depositor, 0))
         .to.be.equal(
-        fakeAccountDeposit.amount
-          .mul(
-            firstPortion.add(secondPortion)
-          )
-          .div(snapshots.P)
-          .div(DECIMAL_PRECISION)
-          .add(initialGains)
-      );
+          fakeAccountDeposit.amount
+            .mul(
+              firstPortion.add(secondPortion)
+            )
+            .div(snapshots.P)
+            .div(DECIMAL_PRECISION)
+            .add(initialGains)
+        );
     });
 
     it("enableCollateral", async () => {
@@ -371,7 +364,7 @@ describe("StabilityPool", () => {
 
     it("_getCompoundedStakeFromSnapshots", async () => {
       const depositor = await user1.getAddress();
-      const snapshots1 = {P: initialP, G: 0, scale: 0, epoch: 0};
+      const snapshots1 = { P: initialP, G: 0, scale: 0, epoch: 0 };
       await stabilityPool.putDepositSnapshots(depositor, snapshots1);
       const initialStake = ethers.utils.parseEther("12.34");
       const currentP = initialP;
@@ -387,14 +380,14 @@ describe("StabilityPool", () => {
 
       // non-zero parameters
       // 2. if epochSnapshot < currentEpoch
-      const snapshots2 = {P: initialP, G: 0, scale: 1, epoch: 2};
+      const snapshots2 = { P: initialP, G: 0, scale: 1, epoch: 2 };
       await stabilityPool.setEpoch(snapshots2.epoch + 1);
       expect(await stabilityPool.getCompoundedStakeFromSnapshots(initialStake, snapshots2))
         .to.be.equal(0);
 
       // 3. scale diff == 1 and > stake / 1e9
       // prepare
-      const snapshots3 = {P: initialP, G: 0, scale: 1, epoch: 2};
+      const snapshots3 = { P: initialP, G: 0, scale: 1, epoch: 2 };
       const fakeCurrentP = snapshots3.P;
       let fakeCurrrentScale = snapshots3.scale + 1;
       await stabilityPool.setP(fakeCurrentP);
@@ -411,7 +404,7 @@ describe("StabilityPool", () => {
 
       // 4. scale diff == 2
       // prepare
-      const snapshots4 = {P: initialP, G: 0, scale: 1, epoch: 2};
+      const snapshots4 = { P: initialP, G: 0, scale: 1, epoch: 2 };
       await stabilityPool.setP(snapshots4.P);
       await stabilityPool.setScale(snapshots4.scale + 2);
       await stabilityPool.setEpoch(snapshots4.epoch);
@@ -430,9 +423,9 @@ describe("StabilityPool", () => {
       expect(await stabilityPool.getCompoundedDebtDeposit(depositor)).to.be.equal(0);
 
       // 2. else
-      const fakeAccountDeposit = {amount: ethers.utils.parseEther("1.23"), timestamp: await time.latest()};
+      const fakeAccountDeposit = { amount: ethers.utils.parseEther("1.23"), timestamp: await time.latest() };
       await stabilityPool.setAccountDeposits(depositor, fakeAccountDeposit);
-      const fakeSnapshots = {P: initialP, G: 0, scale: 0, epoch: 0};
+      const fakeSnapshots = { P: initialP, G: 0, scale: 0, epoch: 0 };
       await stabilityPool.setDepositSnapshots(depositor, fakeSnapshots);
 
       const currentP = await stabilityPool.P();
@@ -443,7 +436,7 @@ describe("StabilityPool", () => {
 
     it("_getListaGainFromSnapshots, ", async () => {
       const initialStake = ethers.utils.parseEther("123.789");
-      const snapshots = {P: initialP, G: initialG, scale: 0, epoch: 0};
+      const snapshots = { P: initialP, G: initialG, scale: 0, epoch: 0 };
       const firstG = snapshots.G.mul(5).div(2);
       const secondG = snapshots.G.mul(8).div(10);
       await stabilityPool.setEpochToScaleToG(snapshots.epoch, snapshots.scale, firstG);
@@ -465,11 +458,11 @@ describe("StabilityPool", () => {
       expect(await getStoredPendingReward(depositor)).to.be.equal(0);
 
       // 2. initialDeposit != 0
-      const fakeAccountDeposit = {amount: ethers.utils.parseEther("1.23"), timestamp: await time.latest()};
+      const fakeAccountDeposit = { amount: ethers.utils.parseEther("1.23"), timestamp: await time.latest() };
       await stabilityPool.setAccountDeposits(depositor, fakeAccountDeposit);
 
       // 2.1. prepare data
-      const snapshots = {P: initialP, G: initialG, scale: 0, epoch: 0};
+      const snapshots = { P: initialP, G: initialG, scale: 0, epoch: 0 };
       await stabilityPool.setDepositSnapshots(depositor, snapshots);
       const firstG = snapshots.G.mul(5).div(2);
       const secondG = snapshots.G.mul(8).div(10);
@@ -520,7 +513,7 @@ describe("StabilityPool", () => {
       await stabilityPool.setEpochToScaleToG(0, 0, currentG);
       const snapshots = await stabilityPool.depositSnapshots(depositor);
 
-      await time.increase(2 * ONE_DAY);
+      await time.increase(2 * DAY);
 
       // check
       const rewardRate = emissionAmount.div(REWARD_DURATION);
@@ -546,7 +539,7 @@ describe("StabilityPool", () => {
       await listaVault.setEmissionAmount(fakeEmissionAmount);
       await prepareCollateral(erc20Token);
 
-      await time.increase(ONE_DAY);
+      await time.increase(DAY);
 
       const tx = await stabilityPool.provideToSP(amount);
       await expect(tx).to.emit(stabilityPool, "StabilityPoolDebtBalanceUpdated").withArgs(amount);
@@ -578,7 +571,7 @@ describe("StabilityPool", () => {
 
       // 2. second provide
       // two days latter
-      await time.increase(2 * ONE_DAY);
+      await time.increase(2 * DAY);
 
       const amount2 = ethers.utils.parseEther("5");
       const tx2 = await stabilityPool.provideToSP(amount2);
@@ -956,7 +949,7 @@ describe("StabilityPool", () => {
       const periodFinish = lastUpdate + REWARD_DURATION;
       const lastDebtLossError = BigNumber.from("50000");
       await stabilityPool.setLastDebtLossError_Offset(lastDebtLossError);
-      await time.increase(2 * ONE_DAY);
+      await time.increase(2 * DAY);
 
       const rewardRate = emissionAmount.div(REWARD_DURATION);
       expect(await stabilityPool.rewardRate()).to.be.equal(rewardRate);
@@ -1001,7 +994,7 @@ describe("StabilityPool", () => {
       await stabilityPool.provideToSP(amount);
       const snapshot = await stabilityPool.depositSnapshots(depositor);
       await stabilityPool.setEpochToScaleToSums(0, 0, 0, S1);
-      await time.increase(3 * ONE_DAY);
+      await time.increase(3 * DAY);
       const withdrawAmount = amount.sub(DECIMAL_PRECISION.div(3));
 
       // calc

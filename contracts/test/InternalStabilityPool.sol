@@ -3,7 +3,6 @@
 pragma solidity 0.8.19;
 
 import "../core/StabilityPool.sol";
-import "hardhat/console.sol";
 
 contract InternalStabilityPool is StabilityPool {
     constructor(
@@ -22,7 +21,11 @@ contract InternalStabilityPool is StabilityPool {
         )
     {}
 
-    function setCollateralGainsByDepositor(address depositor, uint256 index, uint80 gain) public {
+    function setCollateralGainsByDepositor(
+        address depositor,
+        uint256 index,
+        uint80 gain
+    ) public {
         collateralGainsByDepositor[depositor][index] = gain;
     }
 
@@ -299,9 +302,7 @@ contract InternalStabilityPool is StabilityPool {
         uint256 collaterals = collateralTokens.length;
         uint256 initialDeposit = accountDeposits[_depositor].amount;
         hasGains = false;
-        console.log("initialDeposit = %s", initialDeposit);
         if (initialDeposit == 0) {
-            console.log("return has gain = %s", hasGains);
             return hasGains;
         }
 
@@ -327,9 +328,7 @@ contract InternalStabilityPool is StabilityPool {
                     P_Snapshot /
                     DECIMAL_PRECISION
             );
-            console.log("depositor gains[%s]= %s", i, depositorGains[i]);
         }
-        console.log("hasGains = %s", hasGains);
         return (hasGains);
     }
 }

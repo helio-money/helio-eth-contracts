@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 
 export const ZERO_ADDRESS = ethers.constants.AddressZero;
+export const ZERO = ethers.constants.Zero;
 
 // seconds in a minute, hour, day, week
 export const MINUTE = 60;
