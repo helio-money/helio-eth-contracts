@@ -46,6 +46,7 @@ describe("PriceFeed", () => {
     await internalPriceFeed.deployed();
   });
 
+  // TODO: move to test/ts/utils/contract.ts
   const encodeCallData = (name: string, types: string[], values: any[]) => {
     return `${ethers.utils.id(name).slice(0, 10)}${abi.encode(types, values).slice(2)}`;
   }
