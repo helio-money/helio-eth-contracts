@@ -1,9 +1,8 @@
 import { expect } from "chai";
 import { BigNumber, Signer } from "ethers";
-import { ethers } from "hardhat";
 import { MockInternalTokenLocker, } from "../../../typechain-types";
 import { TokenLocker } from "../../../typechain-types/contracts/test/MockInternalTokenLocker";
-import { getWeek } from "./time";
+import { getWeek, now } from "./time";
 
 export class TokenLockerHelper {
   private readonly tokenLocker: MockInternalTokenLocker;
@@ -22,14 +21,14 @@ export class TokenLockerHelper {
 
   public async getCurWeek(currentTimestamp?: number): Promise<number> {
     if (currentTimestamp === undefined) {
-      currentTimestamp = Math.floor((await ethers.provider.getBlock("latest")).timestamp);
+      currentTimestamp = Math.floor((await now()));
     }
     return getWeek(this.startTimestamp.toNumber(), currentTimestamp);
   }
 
   public async getNextNthWeek(n: number, currentTimestamp?: number): Promise<number> {
     if (currentTimestamp === undefined) {
-      currentTimestamp = Math.floor((await ethers.provider.getBlock("latest")).timestamp);
+      currentTimestamp = Math.floor(await now());
     }
     return getWeek(this.startTimestamp.toNumber(), currentTimestamp) + n;
   }

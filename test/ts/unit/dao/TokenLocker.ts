@@ -1,4 +1,3 @@
-import { Block } from "@ethersproject/providers";
 import { expect } from "chai";
 import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
@@ -108,20 +107,20 @@ describe("TokenLocker Contract", async () => {
   });
 
   describe("setAllowPenaltyWithdrawAfter(uint256)", async () => {
-    let block: Block;
+    let latest: number;
 
     beforeEach(async () => {
-      block = await ethers.provider.getBlock("latest");
+      latest = await time.latest();
     });
 
     it("Should revert if not called by manager", async () => {
-      await expect(tokenLocker.connect(user1).setAllowPenaltyWithdrawAfter(block.timestamp + DAY))
+      await expect(tokenLocker.connect(user1).setAllowPenaltyWithdrawAfter(latest + DAY))
         .to.be.revertedWith("!deploymentManager");
     });
 
     it("Should revert if allowPenaltyWithdrawAfter had been set", async () => {
       // set once
-      await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(block.timestamp + DAY);
+      await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(latest + DAY);
 
       // set again
       await expect(tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(0))
@@ -129,21 +128,21 @@ describe("TokenLocker Contract", async () => {
     });
 
     it("Should revert if allowPenaltyWithdrawAfter is less than and equal to current block timestamp", async () => {
-      await expect(tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(block.timestamp - DAY))
+      await expect(tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(latest - DAY))
         .to.be.revertedWith("Invalid timestamp");
 
-      await expect(tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(block.timestamp))
+      await expect(tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(latest))
         .to.be.revertedWith("Invalid timestamp");
     });
 
     it("Should revert if allowPenaltyWithdrawAfter is greater than and equal to current block timestamp + 13 weeks", async () => {
-      await expect(tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(block.timestamp + 13 * WEEK + HOUR))
+      await expect(tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(latest + 13 * WEEK + HOUR))
         .to.be.revertedWith("Invalid timestamp");
     });
 
     it("Set allowPenaltyWithdrawAfter", async () => {
-      await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(block.timestamp + DAY);
-      expect(await tokenLocker.allowPenaltyWithdrawAfter()).to.equal(block.timestamp + DAY);
+      await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(latest + DAY);
+      expect(await tokenLocker.allowPenaltyWithdrawAfter()).to.equal(latest + DAY);
     });
   });
 
@@ -160,7 +159,7 @@ describe("TokenLocker Contract", async () => {
 
     it("Should revert if allowPenaltyWithdrawAfter has been set but not passed", async () => {
       // should set allowPenaltyWithdrawAfter first
-      const allowPenaltyWithdrawAfter = (await ethers.provider.getBlock("latest")).timestamp + DAY;
+      const allowPenaltyWithdrawAfter = (await time.latest()) + DAY;
       await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(allowPenaltyWithdrawAfter);
 
       // block.timestamp < allowPenaltyWithdrawAfter
@@ -170,7 +169,7 @@ describe("TokenLocker Contract", async () => {
 
     it("Set penaltyWithdrawalsEnabled to true", async () => {
       // should set allowPenaltyWithdrawAfter first
-      const allowPenaltyWithdrawAfter = (await ethers.provider.getBlock("latest")).timestamp + DAY;
+      const allowPenaltyWithdrawAfter = (await time.latest()) + DAY;
       await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(allowPenaltyWithdrawAfter);
 
       // after 1 day
@@ -700,10 +699,10 @@ describe("TokenLocker Contract", async () => {
   });
 
   describe("_lock(address, uint256, uint256)", async () => {
-    let block: Block;
+    let latest: number;
 
     beforeEach(async () => {
-      block = await ethers.provider.getBlock("latest");
+      latest = await time.latest();
     });
 
     it("Should revert if _weeks is greater than MAX_LOCK_WEEKS", async () => {
@@ -715,7 +714,7 @@ describe("TokenLocker Contract", async () => {
       const lockAmount = BigNumber.from(1);
       const lockWeeks = BigNumber.from(1);
       // jump to the next first day of the week
-      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), block.timestamp, 0));
+      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), latest, 0));
       // then lock 1 token for 1 week, the actual locked weeks should be 1
       await tokenLocker.connect(user1)._lockInternal(await user1.getAddress(), lockAmount, lockWeeks);
 
@@ -728,7 +727,7 @@ describe("TokenLocker Contract", async () => {
       const lockAmount = BigNumber.from(1);
       const lockWeeks = BigNumber.from(1);
       // jump to the next final day of the week
-      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), block.timestamp, 6));
+      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), latest, 6));
       // then lock 1 token for 1 week, the actual locked weeks should be 2
       await tokenLocker.connect(user1)._lockInternal(user1.getAddress(), lockAmount, lockWeeks);
 
@@ -741,11 +740,11 @@ describe("TokenLocker Contract", async () => {
       const lockAmount = BigNumber.from(1);
       const lockWeeks = BigNumber.from(2);
       // jump to the next first day of the week
-      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), block.timestamp, 0));
+      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), latest, 0));
 
       // check the accountData.updateWeeks shouldn't be updated
       const accountLockDataBefore = await tokenLocker.getAccountLockData(user1.getAddress());
-      expect(accountLockDataBefore.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), block.timestamp)]).to.be.equal(0);
+      expect(accountLockDataBefore.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), latest)]).to.be.equal(0);
 
       // then lock 1 token for 2 weeks, the actual locked weeks should be 2
       await tokenLocker.connect(user1)._lockInternal(user1.getAddress(), lockAmount, lockWeeks);
@@ -756,18 +755,18 @@ describe("TokenLocker Contract", async () => {
 
       // check accountData.updateWeeks should be updated after lock
       const accountLockDataAfter = await tokenLocker.getAccountLockData(user1.getAddress());
-      expect(accountLockDataAfter.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), block.timestamp)]).not.to.be.equal(0);
+      expect(accountLockDataAfter.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), latest)]).not.to.be.equal(0);
     });
 
     it("Lock more than 1 week in the final 3 days of the week", async () => {
       const lockAmount = BigNumber.from(1);
       const lockWeeks = BigNumber.from(2);
       // jump to the next final day of the week
-      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), block.timestamp, 6));
+      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), latest, 6));
 
       // check the accountData.updateWeeks shouldn't be updated
       const accountLockDataBefore = await tokenLocker.getAccountLockData(user1.getAddress());
-      expect(accountLockDataBefore.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), block.timestamp)]).to.be.equal(0);
+      expect(accountLockDataBefore.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), latest)]).to.be.equal(0);
 
       // then lock 1 token for 2 weeks, the actual locked weeks should be 2
       await tokenLocker.connect(user1)._lockInternal(user1.getAddress(), lockAmount, lockWeeks);
@@ -778,7 +777,7 @@ describe("TokenLocker Contract", async () => {
 
       // check accountData.updateWeeks should be updated after lock
       const accountLockDataAfter = await tokenLocker.getAccountLockData(user1.getAddress());
-      expect(accountLockDataAfter.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), block.timestamp)]).not.to.be.equal(0);
+      expect(accountLockDataAfter.updateWeeks[getWeek(START_TIMESTAMP.toNumber(), latest)]).not.to.be.equal(0);
     });
 
     it("Lock when the account is frozen", async () => {
@@ -786,7 +785,7 @@ describe("TokenLocker Contract", async () => {
       const lockWeeks = BigNumber.from(1);
 
       // jump to the next first day of the week
-      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), block.timestamp, 0));
+      await time.increaseTo(nextWeekDay(START_TIMESTAMP.toNumber(), latest, 0));
 
       // lock 1 token for 2 weeks
       await helper.lockAndFreeze(user1);
@@ -1143,7 +1142,7 @@ describe("TokenLocker Contract", async () => {
       // freeze the account
       await tokenLocker.connect(user1).freeze();
 
-      const currentWeek = getWeek(START_TIMESTAMP.toNumber(), (await ethers.provider.getBlock("latest")).timestamp);
+      const currentWeek = getWeek(START_TIMESTAMP.toNumber(), (await time.latest()));
       const unlockWeek = currentWeek + MAX_LOCK_WEEKS.toNumber();
       const unlockWeekIdx = Math.floor(unlockWeek / 256);
 
@@ -1250,7 +1249,7 @@ describe("TokenLocker Contract", async () => {
     // init and check locked data
     beforeEach(async () => {
       // enabled penalty withdrawals
-      const startAllowPenaltyWithdrawAfter = nextWeekDay(START_TIMESTAMP.toNumber(), (await ethers.provider.getBlock("latest")).timestamp, 0);
+      const startAllowPenaltyWithdrawAfter = nextWeekDay(START_TIMESTAMP.toNumber(), (await time.latest()), 0);
       await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(startAllowPenaltyWithdrawAfter);
       // jump to startAllowPenaltyWithdrawAfter
       await time.increaseTo(startAllowPenaltyWithdrawAfter + 1);
@@ -1455,7 +1454,7 @@ describe("TokenLocker Contract", async () => {
     // init and check locked data
     beforeEach(async () => {
       // enabled penalty withdrawals
-      const startAllowPenaltyWithdrawAfter = nextWeekDay(START_TIMESTAMP.toNumber(), (await ethers.provider.getBlock("latest")).timestamp, 0);
+      const startAllowPenaltyWithdrawAfter = nextWeekDay(START_TIMESTAMP.toNumber(), (await time.latest()), 0);
       await tokenLocker.connect(manager).setAllowPenaltyWithdrawAfter(startAllowPenaltyWithdrawAfter);
       // jump to startAllowPenaltyWithdrawAfter
       await time.increaseTo(startAllowPenaltyWithdrawAfter + 1);

@@ -122,13 +122,11 @@ export class AdminVotingHelper {
   }
 
   async now(): Promise<number> {
-    const block = await ethers.provider.getBlock("latest");
-    return block.timestamp;
+    return time.latest();
   }
 
   async getWeek(): Promise<number> {
-    const block = await ethers.provider.getBlock("latest");
-    return getWeek(this.startTimestamp.toNumber(), block.timestamp);
+    return getWeek(this.startTimestamp.toNumber(), await this.now());
   }
 
   getNthWeek(n: number): number {

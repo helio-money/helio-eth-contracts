@@ -1,4 +1,5 @@
 import { DAY, WEEK } from "./constant";
+const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 /**
  * Get the week of the current timestamp relative to the startTimestamp.
@@ -11,6 +12,10 @@ export const getWeek = (startTimestamp: number, currentTimestamp: number): numbe
     throw new Error("currentTimestamp must be greater than or equal to startTimestamp");
   }
   return Math.floor((currentTimestamp - startTimestamp) / WEEK);
+}
+
+export const now = async (): Promise<number> => {
+  return time.latest();
 }
 
 /**
