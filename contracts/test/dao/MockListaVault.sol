@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.19;
 
-import "../dao/ListaVault.sol";
-import "./InternalStabilityPool.sol";
+import "../../dao/ListaVault.sol";
+import "../core/InternalStabilityPool.sol";
 
 contract MockListaVault {
     uint256 public emissionAmount;

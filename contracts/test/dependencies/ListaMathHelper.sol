@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import "../dependencies/ListaMath.sol";
+import "../../dependencies/ListaMath.sol";
 
 /**
  * @title ListaMathHelper

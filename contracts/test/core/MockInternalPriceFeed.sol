@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.19;
-import "../core/PriceFeed.sol";
+import "../../core/PriceFeed.sol";
 
 contract MockInternalPriceFeed is PriceFeed {
     constructor(

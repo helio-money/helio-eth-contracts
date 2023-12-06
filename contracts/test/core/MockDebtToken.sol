@@ -3,7 +3,7 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./InternalStabilityPool.sol";
+import "../core/InternalStabilityPool.sol";
 
 contract MockDebtToken is ERC20 {
     uint256 public emissionAmount;

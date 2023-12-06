@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import "../dependencies/DelegatedOps.sol";
+import "../../dependencies/DelegatedOps.sol";
 
 /**
  * @title MockDelegatedOps

@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import "../core/StabilityPool.sol";
+import "../../core/StabilityPool.sol";
 
 contract InternalStabilityPool is StabilityPool {
     constructor(

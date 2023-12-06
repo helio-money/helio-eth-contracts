@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.19;
-import "../interfaces/IAggregatorV3Interface.sol";
+import "../../interfaces/IAggregatorV3Interface.sol";
 
 contract MockAggregator is IAggregatorV3Interface {
     uint8 private decimalsVal = 8;

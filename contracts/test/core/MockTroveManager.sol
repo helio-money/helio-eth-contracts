@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import "../core/BorrowerOperations.sol";
+import "../../core/BorrowerOperations.sol";
 
 contract MockTroveManager {
     bool public sunsetting;
