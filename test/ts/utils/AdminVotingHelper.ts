@@ -26,7 +26,7 @@ export class AdminVotingHelper {
   public user2: Signer; // 20% weight
   public user3: Signer; // 30% weight
 
-  //contracts
+  // contracts
   private listaCore: ListaCore;
   private tokenLocker: TokenLocker;
   private listaToken: ListaToken;
