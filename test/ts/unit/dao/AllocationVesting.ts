@@ -54,10 +54,10 @@ describe("AllocationVesting Conract", () => {
 
     // deploy ListaCore
     listaCore = await ethers.deployContract("ListaCore", [
-      await owner.getAddress(),
+      owner.getAddress(),
       guardian.getAddress(),
       ZERO_ADDRESS,
-      await feeReceiver.getAddress()
+      feeReceiver.getAddress()
     ]) as ListaCore;
     await listaCore.deployed();
 
@@ -66,7 +66,7 @@ describe("AllocationVesting Conract", () => {
       listaCore.address,
       ZERO_ADDRESS,
       ZERO_ADDRESS,
-      await manager.getAddress(),
+      manager.getAddress(),
       _1E18,
     ]) as TokenLocker;
     await tokenLocker.deployed();

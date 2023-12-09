@@ -20,7 +20,7 @@ describe("AirdropDistributor Contract", () => {
 
     it("Set merkle root", async () => {
       const tx = await helper.airdropDistributor().setMerkleRoot(helper.merkleRoot);
-      expect(tx)
+      await expect(tx)
         .to.be.emit(helper.airdropDistributor(), "MerkleRootSet").withArgs(helper.merkleRoot, await helper.airdropDistributor().canClaimUntil());
     });
 
@@ -126,7 +126,7 @@ describe("AirdropDistributor Contract", () => {
       await helper.airdropDistributor(helper.user1).setClaimCallback(helper.claimCallback.address);
 
       const tx = await helper.airdropDistributor().claim(node0.proxy, node0.account, node0.index, node0.amount, helper.merkleTree.getHexProof(node0.leaf));
-      expect(tx)
+      await expect(tx)
         .to.be.emit(helper.airdropDistributor(), "Claimed")
         .to.be.emit(helper.claimCallback, "CallbackClaimed").withArgs(node0.proxy, node0.amount);
     });
@@ -141,7 +141,7 @@ describe("AirdropDistributor Contract", () => {
       const [node0] = helper.originNodes;
 
       const tx = await helper.airdropDistributor().claim(node0.proxy, node0.account, node0.index, node0.amount, helper.merkleTree.getHexProof(node0.leaf));
-      expect(tx)
+      await expect(tx)
         .to.be.emit(helper.airdropDistributor(), "Claimed")
         .not.to.be.emit(helper.claimCallback, "CallbackClaimed");
     });

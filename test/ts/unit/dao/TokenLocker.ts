@@ -827,7 +827,7 @@ describe("TokenLocker Contract", async () => {
         .to.be.revertedWith("Lock is frozen");
     });
 
-    it("Shoud revert if _weeks is 0", async () => {
+    it("Should revert if _weeks is 0", async () => {
       await expect(tokenLocker.connect(user1).extendLock(lockAmount, 0, newWeeks))
         .to.be.revertedWith("Min 1 week");
     });
