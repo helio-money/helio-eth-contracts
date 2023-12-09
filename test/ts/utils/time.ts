@@ -1,3 +1,4 @@
+import { BigNumber } from "ethers";
 import { DAY, WEEK } from "./constant";
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
@@ -16,6 +17,14 @@ export const getWeek = (startTimestamp: number, currentTimestamp: number): numbe
 
 export const now = async (): Promise<number> => {
   return time.latest();
+}
+
+export const increase = async (seconds: number | BigNumber | Promise<number | BigNumber>) => {
+  await time.increase(await seconds);
+}
+
+export const increaseTo = async (timestamp: number | BigNumber | Promise<number | BigNumber>) => {
+  await time.increaseTo(timestamp);
 }
 
 /**
