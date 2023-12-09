@@ -9,6 +9,8 @@ contract MockDebtToken is ERC20 {
     uint256 public emissionAmount;
     uint256 public exchangeRate;
     uint256 public returnedCollateralAmount;
+    address public gasPool;
+    uint256 public gasCompensation;
 
     event DepositEth(
         address sender,
@@ -82,11 +84,21 @@ contract MockDebtToken is ERC20 {
         _mint(_account, _amount);
     }
 
+    function burn(address _account, uint256 _amount) public {
+        _burn(_account, _amount);
+    }
+
+    function setGasPool(address value, uint256 compensation) public {
+        gasPool = value;
+        gasCompensation = compensation;
+    }
+
     function mintWithGasCompensation(
         address _account,
         uint256 _amount
     ) public returns (bool) {
         _mint(_account, _amount);
+        _mint(gasPool, gasCompensation);
         return true;
     }
 

@@ -2,212 +2,113 @@
 
 pragma solidity 0.8.19;
 
-import "../../core/BorrowerOperations.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./InternalTroveManager.sol";
+import "./MockDebtToken.sol";
+import "./InternalBorrowerOperations.sol";
 
-contract MockBorrowerOperations is BorrowerOperations {
-    constructor(
-        address _listaCore,
-        address _wBETH,
-        address _referral,
-        address _debtTokenAddress,
-        address _factory,
-        uint256 _minNetDebt,
-        uint256 _gasCompensation
-    )
-        BorrowerOperations(
-            _listaCore,
-            _wBETH,
-            _referral,
-            _debtTokenAddress,
-            _factory,
-            _minNetDebt,
-            _gasCompensation
-        )
-    {}
+contract MockBorrowerOperations {
+    using SafeERC20 for IERC20;
 
-    function getTroveManagersLength() public view returns (uint256) {
-        return _troveManagers.length;
+    InternalTroveManager public troveManager;
+    MockDebtToken public wBETH;
+    MockDebtToken public debtToken;
+    uint256 public TCR;
+
+    function setAddresses(
+        InternalTroveManager value,
+        MockDebtToken beth,
+        MockDebtToken _debtToken
+    ) public {
+        troveManager = value;
+        wBETH = beth;
+        debtToken = _debtToken;
     }
 
-    function getCollateralAmount(
-        uint256 ethAmount
-    ) public view returns (uint256) {
-        return super._getCollateralAmount(ethAmount);
+    function setTCR(uint256 value) public {
+        TCR = value;
     }
 
-    function getCollChange(
-        uint256 _collReceived,
-        uint256 _requestedCollWithdrawal
-    ) public pure returns (uint256 collChange, bool isCollIncrease) {
-        return super._getCollChange(_collReceived, _requestedCollWithdrawal);
+    function getTCR() external returns (uint256 globalTotalCollateralRatio) {
+        return TCR;
     }
 
-    function requireICRisAboveMCR(uint256 _newICR, uint256 MCR) public pure {
-        super._requireICRisAboveMCR(_newICR, MCR);
-    }
-
-    function requireICRisAboveCCR(uint256 _newICR) public pure {
-        super._requireICRisAboveCCR(_newICR);
-    }
-
-    function requireNewICRisAboveOldICR(
-        uint256 _newICR,
-        uint256 _oldICR
-    ) public pure {
-        super._requireNewICRisAboveOldICR(_newICR, _oldICR);
-    }
-
-    function requireNewTCRisAboveCCR(uint256 _newTCR) public pure {
-        super._requireNewTCRisAboveCCR(_newTCR);
-    }
-
-    function requireAtLeastMinNetDebt(uint256 _netDebt) public view {
-        super._requireAtLeastMinNetDebt(_netDebt);
-    }
-
-    function requireValidMaxFeePercentage(
-        uint256 _maxFeePercentage
-    ) public pure {
-        super._requireValidMaxFeePercentage(_maxFeePercentage);
-    }
-
-    function requireValidwBETHAmount(
-        uint256 ethAmount,
+    function getETHAmount(
         uint256 collateralAmount
-    ) public payable {
-        super._requireValidwBETHAmount(ethAmount, collateralAmount);
+    ) external view returns (uint256) {
+        return (collateralAmount * 123) / 10;
     }
 
-    function getNewTroveAmounts(
-        uint256 _coll,
-        uint256 _debt,
-        uint256 _collChange,
-        bool _isCollIncrease,
-        uint256 _debtChange,
-        bool _isDebtIncrease
-    ) public pure returns (uint256, uint256) {
+    function openTrove(
+        address _borrower,
+        uint256 _collateralAmount,
+        uint256 _compositeDebt,
+        uint256 NICR,
+        address _upperHint,
+        address _lowerHint,
+        bool _isRecoveryMode
+    ) external payable returns (uint256 stake, uint256 arrayIndex) {
+        wBETH.deposit{value: msg.value}(address(0));
+        IERC20(wBETH).safeTransfer(address(troveManager), _collateralAmount);
+        debtToken.mintWithGasCompensation(msg.sender, _compositeDebt);
+
         return
-            super._getNewTroveAmounts(
-                _coll,
-                _debt,
-                _collChange,
-                _isCollIncrease,
-                _debtChange,
-                _isDebtIncrease
+            troveManager.openTrove(
+                _borrower,
+                _collateralAmount,
+                _compositeDebt,
+                NICR,
+                _upperHint,
+                _lowerHint,
+                _isRecoveryMode
             );
     }
 
-    function getNewTCRFromTroveChange(
-        uint256 totalColl,
-        uint256 totalDebt,
-        uint256 _collChange,
-        bool _isCollIncrease,
-        uint256 _debtChange,
-        bool _isDebtIncrease
-    ) public pure returns (uint256) {
-        return
-            super._getNewTCRFromTroveChange(
-                totalColl,
-                totalDebt,
-                _collChange,
-                _isCollIncrease,
-                _debtChange,
-                _isDebtIncrease
-            );
+    function closeTrove(
+        address _borrower,
+        address _receiver,
+        uint256 collAmount,
+        uint256 debtAmount
+    ) external {
+        troveManager.closeTrove(_borrower, _receiver, collAmount, debtAmount);
     }
 
-    function getNewICRFromTroveChange(
-        uint256 _coll,
-        uint256 _debt,
-        uint256 _collChange,
-        bool _isCollIncrease,
-        uint256 _debtChange,
-        bool _isDebtIncrease,
-        uint256 _price
-    ) public pure returns (uint256) {
-        return
-            super._getNewICRFromTroveChange(
-                _coll,
-                _debt,
-                _collChange,
-                _isCollIncrease,
-                _debtChange,
-                _isDebtIncrease,
-                _price
-            );
-    }
-
-    function getTCRData(
-        SystemBalances memory balances
-    )
-        public
-        pure
-        returns (
-            uint256 amount,
-            uint256 totalPricedCollateral,
-            uint256 totalDebt
-        )
-    {
-        return super._getTCRData(balances);
-    }
-
-    function getCollateralAndTCRData(
-        ITroveManager troveManager
-    )
-        public
-        returns (
-            IERC20 collateralToken,
-            uint256 price,
-            uint256 totalPricedCollateral,
-            uint256 totalDebt,
-            bool isRecoveryMode
-        )
-    {
-        return super._getCollateralAndTCRData(troveManager);
-    }
-
-    function requireValidAdjustmentInCurrentMode(
-        uint256 totalPricedCollateral,
-        uint256 totalDebt,
+    function updateTroveFromAdjustment(
         bool _isRecoveryMode,
-        uint256 _collWithdrawal,
         bool _isDebtIncrease,
-        LocalVariables_adjustTrove memory _vars
-    ) public pure {
-        super._requireValidAdjustmentInCurrentMode(
-            totalPricedCollateral,
-            totalDebt,
-            _isRecoveryMode,
-            _collWithdrawal,
-            _isDebtIncrease,
-            _vars
-        );
-    }
-
-    function requireUserAcceptsFee(
-        uint256 _fee,
-        uint256 _amount,
-        uint256 _maxFeePercentage
-    ) public pure {
-        super._requireUserAcceptsFee(_fee, _amount, _maxFeePercentage);
-    }
-
-    function triggerBorrowingFee(
-        ITroveManager _troveManager,
-        IERC20 collateralToken,
-        address _caller,
-        uint256 _maxFeePercentage,
-        uint256 _debtAmount
-    ) public returns (uint256) {
+        uint256 _debtChange,
+        uint256 _netDebtChange,
+        bool _isCollIncrease,
+        uint256 _collChange,
+        address _upperHint,
+        address _lowerHint,
+        address _borrower,
+        address _receiver
+    ) external returns (uint256, uint256, uint256) {
         return
-            super._triggerBorrowingFee(
-                _troveManager,
-                collateralToken,
-                _caller,
-                _maxFeePercentage,
-                _debtAmount
+            troveManager.updateTroveFromAdjustment(
+                _isRecoveryMode,
+                _isDebtIncrease,
+                _debtChange,
+                _netDebtChange,
+                _isCollIncrease,
+                _collChange,
+                _upperHint,
+                _lowerHint,
+                _borrower,
+                _receiver
             );
     }
 
-    function transferETH() public payable {}
+    function applyPendingRewards(
+        address _borrower
+    ) external returns (uint256 coll, uint256 debt) {
+        return troveManager.applyPendingRewards(_borrower);
+    }
+
+    function decayBaseRateAndGetBorrowingFee(
+        uint256 _debt
+    ) external returns (uint256) {
+        return troveManager.decayBaseRateAndGetBorrowingFee(_debt);
+    }
 }

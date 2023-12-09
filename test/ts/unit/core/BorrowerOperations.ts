@@ -1,11 +1,10 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { BigNumber, Signer } from "ethers";
-import { MockBorrowerOperations, MockDebtToken, MockListaCore, MockTroveManager } from "../../../../typechain-types";
+import { BigNumber, Contract, Signer } from "ethers";
+import { InternalBorrowerOperations, MockDebtToken, MockListaCore, MockTroveManager } from "../../../../typechain-types";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-import { ZERO, ZERO_ADDRESS, _1E18 } from "../../utils";
-
-const parseEther = ethers.utils.parseEther;
+import { _1E18, ZERO, ZERO_ADDRESS } from "../../utils";
+import { parseEther } from "ethers/lib/utils";
 
 describe("BorrowerOperations", () => {
   const factory = "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF";
@@ -19,8 +18,9 @@ describe("BorrowerOperations", () => {
   let debtToken: MockDebtToken;
   let erc20Token: MockDebtToken;
   let troveManager: MockTroveManager;
-  let borrowerOperations: MockBorrowerOperations;
+  let borrowerOperations: InternalBorrowerOperations;
   let wBETH: string;
+  let gasPool: Contract;
 
   let owner: Signer;
   let user1: Signer;
@@ -36,8 +36,12 @@ describe("BorrowerOperations", () => {
     const startTime = await time.latest();
     await listaCore.setStartTime(startTime);
 
+    gasPool = await ethers.deployContract("GasPool", []);
+    await gasPool.deployed();
+
     debtToken = await ethers.deployContract("MockDebtToken", ["debt", "DEBT"]) as MockDebtToken;
     await debtToken.deployed();
+    await debtToken.setGasPool(gasPool.address, gasCompensation);
 
     erc20Token = await ethers.deployContract("MockDebtToken", ["coll", "COLL"]) as MockDebtToken;
     await erc20Token.deployed();
@@ -46,7 +50,7 @@ describe("BorrowerOperations", () => {
     troveManager = await ethers.deployContract("MockTroveManager", []) as MockTroveManager;
     await troveManager.deployed();
 
-    borrowerOperations = await ethers.deployContract("MockBorrowerOperations", [
+    borrowerOperations = await ethers.deployContract("InternalBorrowerOperations", [
       listaCore.address,
       wBETH,
       referral,
@@ -54,7 +58,7 @@ describe("BorrowerOperations", () => {
       factory,
       minNetDebt,
       gasCompensation
-    ]) as MockBorrowerOperations;
+    ]) as InternalBorrowerOperations;
     await borrowerOperations.deployed();
   })
 
@@ -734,33 +738,6 @@ describe("BorrowerOperations", () => {
 
     it("withdrawColl", async () => {
       const params = await initEnv();
-      // const ethAmount = BigNumber.from("37037010");
-      // const maxFeePercent = parseEther("0.33");
-      // const debtAmount = parseEther("2");
-      // const exchangeRate = BigNumber.from("1234567");
-      // const collAmount = await getCollAmount(exchangeRate, ethAmount);
-      // await erc20Token.setReturnedCollateralAmount(collAmount);
-      // const feeReceiver = await user2.getAddress();
-      // await listaCore.setFeeReceiver(feeReceiver);
-      // const MCR = parseEther("1.1");
-      // await troveManager.setMCR(MCR);
-      // const totalColl = parseEther("100");
-      // const totalDebt = parseEther("20");
-      // const price = parseEther("0.3001");
-      // await setEntireSystemBalances(totalColl, totalDebt, price);
-      // const debtFee = parseEther("0.61");
-      // await troveManager.setFee(debtFee);
-      // const netDebtFee = debtAmount.add(debtFee);
-      // const compositeDebt = netDebtFee.add(gasCompensation);
-      //
-      // const collReward = collAmount.mul(parseEther("0.1333")).div(PRECISION);
-      // const debtReward = debtAmount.mul(parseEther("2.5")).div(PRECISION);
-      // const newColl = collAmount.add(collReward);
-      // const newDebt = debtAmount.add(debtReward);
-      // await troveManager.setPendingRewards(newColl, newDebt);
-      //
-      // const trcData = getTCRData(collAmount, debtAmount, price);
-      // const recoveryMode = isRecoveryMode(trcData.tcr);
       expect(params.recoveryMode).to.be.false;
       await borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), params.maxFeePercent, params.debtAmount, ZERO_ADDRESS, ZERO_ADDRESS, { value: params.ethAmount });
       await expect(borrowerOperations.withdrawColl(troveManager.address, await user1.getAddress(), 0, ZERO_ADDRESS, ZERO_ADDRESS))
