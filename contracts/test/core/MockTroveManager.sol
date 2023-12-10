@@ -3,6 +3,7 @@
 pragma solidity 0.8.19;
 
 import "../../core/BorrowerOperations.sol";
+import "../../core/SortedTroves.sol";
 
 contract MockTroveManager {
     bool public sunsetting;
@@ -13,6 +14,8 @@ contract MockTroveManager {
     uint256 public MCR;
     uint256 public pendingCollReward;
     uint256 public pendingDebtReward;
+    SortedTroves public sortedTroves;
+    mapping(address => uint256) public idToNICR;
 
     function setMCR(uint256 value) public {
         MCR = value;
@@ -124,5 +127,39 @@ contract MockTroveManager {
         address /*_receive*/
     ) external pure returns (uint256, uint256, uint256) {
         return (0, 0, 0);
+    }
+
+    function setSortedTroves(address value) public {
+        sortedTroves = SortedTroves(value);
+    }
+
+    function setNICR(address id, uint256 value) public {
+        idToNICR[id] = value;
+    }
+
+    function getNominalICR(address _borrower) external view returns (uint256) {
+        return idToNICR[_borrower];
+    }
+
+    function insert(
+        address _id,
+        uint256 _NICR,
+        address _prevId,
+        address _nextId
+    ) external {
+        sortedTroves.insert(_id, _NICR, _prevId, _nextId);
+    }
+
+    function remove(address _id) external {
+        sortedTroves.remove(_id);
+    }
+
+    function reInsert(
+        address _id,
+        uint256 _newNICR,
+        address _prevId,
+        address _nextId
+    ) external {
+        sortedTroves.reInsert(_id, _newNICR, _prevId, _nextId);
     }
 }
