@@ -14,7 +14,6 @@ describe("EmissionSchedule Contract", () => {
   const LOCK_DECAY_WEEKS = 52;
   const WEEKLY_PCT = 10;
   const SCHEDULED_WEEKLY_PCT = [] as [number, number][];
-  // const SCHEDULED_WEEKLY_PCT = [[1, 2]];
 
   // contracts
   let emissionSchedule: EmissionSchedule;

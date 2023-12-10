@@ -10,6 +10,7 @@ contract MockIncentiveVoting {
     mapping(address => uint16) public unfreezeData; // 0 = uncalled, 1 = false, 2 = true
     mapping(address => bool) public clearRegisteredWeightData; // false = uncalled, true = called
     mapping(uint256 => mapping(uint256 => uint256)) public receiverVotePct;
+    uint256 public receiverCount;
 
     function unfreeze(address account, bool keepVote) external returns (bool) {
         unfreezeData[account] = keepVote ? 2 : 1;
@@ -34,5 +35,11 @@ contract MockIncentiveVoting {
         uint256 week
     ) public view returns (uint256) {
         return receiverVotePct[id][week];
+    }
+
+    function registerNewReceiver() public returns (uint256 id) {
+        id = receiverCount;
+        receiverCount++;
+        return id;
     }
 }
