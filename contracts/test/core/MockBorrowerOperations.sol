@@ -14,6 +14,8 @@ contract MockBorrowerOperations {
     MockDebtToken public wBETH;
     MockDebtToken public debtToken;
     uint256 public TCR;
+    uint256 public globalSysPricedColl;
+    uint256 public globalSysDebt;
 
     function setAddresses(
         InternalTroveManager value,
@@ -110,5 +112,17 @@ contract MockBorrowerOperations {
         uint256 _debt
     ) external returns (uint256) {
         return troveManager.decayBaseRateAndGetBorrowingFee(_debt);
+    }
+
+    function setGlobalSystemBalances(uint256 pricedColl, uint256 debt) public {
+        globalSysPricedColl = pricedColl;
+        globalSysDebt = debt;
+    }
+
+    function getGlobalSystemBalances()
+        public
+        returns (uint256 totalPricedCollateral, uint256 totalDebt)
+    {
+        return (globalSysPricedColl, globalSysDebt);
     }
 }

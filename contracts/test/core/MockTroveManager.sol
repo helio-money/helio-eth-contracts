@@ -12,10 +12,30 @@ contract MockTroveManager {
     uint256 public price;
     uint256 public feeRate;
     uint256 public MCR;
-    uint256 public pendingCollReward;
-    uint256 public pendingDebtReward;
+    uint256 public _pendingCollReward;
+    uint256 public _pendingDebtReward;
     SortedTroves public sortedTroves;
     mapping(address => uint256) public idToNICR;
+    mapping(address => uint256) public idToICR;
+    mapping(address => Trove) public Troves;
+    uint256 public troveOwnersCount;
+
+    struct Trove {
+        uint256 debt;
+        uint256 coll;
+        uint256 stake;
+        Status status;
+        uint128 arrayIndex;
+        uint256 activeInterestIndex;
+    }
+
+    enum Status {
+        nonExistent,
+        active,
+        closedByOwner,
+        closedByLiquidation,
+        closedByRedemption
+    }
 
     function setMCR(uint256 value) public {
         MCR = value;
@@ -104,14 +124,46 @@ contract MockTroveManager {
     }
 
     function setPendingRewards(uint256 collReward, uint256 debtReward) public {
-        pendingCollReward = collReward;
-        pendingDebtReward = debtReward;
+        _pendingCollReward = collReward;
+        _pendingDebtReward = debtReward;
     }
+
+    function setUserTrove(address account, uint256 coll, uint256 debt) public {
+        Troves[account] = Trove(debt, coll, 0, Status.active, 0, 0);
+    }
+
+    function getEntireDebtAndColl(
+        address _borrower
+    )
+        public
+        view
+        returns (
+            uint256 debt,
+            uint256 coll,
+            uint256 pendingDebtReward,
+            uint256 pendingCollateralReward
+        )
+    {
+        Trove memory t = Troves[_borrower];
+        return (
+            t.debt + _pendingDebtReward,
+            t.coll + _pendingCollReward,
+            _pendingDebtReward,
+            _pendingCollReward
+        );
+    }
+
+    function movePendingTroveRewardsToActiveBalances(
+        uint256 _debt,
+        uint256 _collateral
+    ) public {}
+
+    function closeTroveByLiquidation(address _borrower) public {}
 
     function applyPendingRewards(
         address /*_borrower*/
     ) public view returns (uint256 coll, uint256 debt) {
-        return (pendingCollReward, pendingDebtReward);
+        return (_pendingCollReward, _pendingDebtReward);
     }
 
     function updateTroveFromAdjustment(
@@ -135,6 +187,10 @@ contract MockTroveManager {
 
     function setNICR(address id, uint256 value) public {
         idToNICR[id] = value;
+    }
+
+    function setICR(address id, uint256 value) public {
+        idToICR[id] = value;
     }
 
     function getNominalICR(address _borrower) external view returns (uint256) {
@@ -161,5 +217,54 @@ contract MockTroveManager {
         address _nextId
     ) external {
         sortedTroves.reInsert(_id, _newNICR, _prevId, _nextId);
+    }
+
+    function addCollateralSurplus(
+        address borrower,
+        uint256 collSurplus
+    ) public {}
+
+    function updateBalances() public {}
+
+    function setTroveOwnersCount(uint256 value) public {
+        troveOwnersCount = value;
+    }
+
+    function getTroveOwnersCount() public view returns (uint256) {
+        return troveOwnersCount;
+    }
+
+    function fetchPrice() external returns (uint256) {
+        return price;
+    }
+
+    function getCurrentICR(
+        address _borrower,
+        uint256 /*_price*/
+    ) external view returns (uint256) {
+        return idToICR[_borrower];
+    }
+
+    function finalizeLiquidation(
+        address _liquidator,
+        uint256 _debt,
+        uint256 _coll,
+        uint256 _collSurplus,
+        uint256 _debtGasComp,
+        uint256 _collGasComp
+    ) public {}
+
+    function decreaseDebtAndSendCollateral(
+        address account,
+        uint256 debt,
+        uint256 coll
+    ) public {}
+
+    function collateralToken() public view returns (address) {
+        return address(0);
+    }
+
+    function getTroveStatus(address _borrower) public view returns (uint256) {
+        return uint256(Troves[_borrower].status);
     }
 }
