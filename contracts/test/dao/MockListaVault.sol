@@ -8,6 +8,7 @@ import "../core/InternalStabilityPool.sol";
 contract MockListaVault {
     uint256 public emissionAmount;
     IEmissionSchedule public emissionSchedule;
+    IIncentiveVoting public incentiveVoting;
 
     function setEmissionAmount(uint256 amount) public {
         emissionAmount = amount;
@@ -33,5 +34,14 @@ contract MockListaVault {
         uint256 unallocatedTotal
     ) public returns (uint256 amount, uint256 lock) {
         return emissionSchedule.getTotalWeeklyEmissions(week, unallocatedTotal);
+    }
+
+    function setIncentiveVoting(address _incentiveVoting) public {
+        incentiveVoting = IIncentiveVoting(_incentiveVoting);
+    }
+
+    function registerNewReceiver() external {
+        // ensure the stability pool is registered with receiver ID 0
+        incentiveVoting.registerNewReceiver();
     }
 }
