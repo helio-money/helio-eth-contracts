@@ -98,6 +98,14 @@ describe("TroveManager", () => {
   const now = async () => {
     return BigNumber.from(await time.latest());
   }
+
+  const getWeekAndDay = (duration: BigNumber) => {
+    return {
+      week: duration.div(WEEK),
+      day: duration.mod(WEEK).div(DAY)
+    };
+  }
+
   describe("Deployment", () => {
     it("Deploy", async () => {
       expect(await troveManager.debtToken()).to.be.equal(debtToken.address);
@@ -227,7 +235,6 @@ describe("TroveManager", () => {
         interestFactor
       } = await calculateInterestIndex(lastIndexUpdateTime, interestRate, nowTimestamp);
 
-      console.log(111, "currInterIndex:", currentInterestIndex, "interFactor:", interestFactor);
       let interest = ZERO;
       let totalDebt = await internalTotalActiveDebt();
       if (interestFactor.gt(0)) {
@@ -286,11 +293,9 @@ describe("TroveManager", () => {
     const calcDecayedBaseRate = async (nowTime: BigNumber, lastTime: BigNumber, baseRate: BigNumber, minuteDecayFactor: BigNumber) => {
       const elapsedMinutes = nowTime.sub(lastTime).div(60);
       const factor = await listaMath._decPow(minuteDecayFactor, elapsedMinutes);
-      console.log(111, "factor:", factor);
       return baseRate.mul(factor).div(_1E18);
     }
     const initParameters = async () => {
-      console.log(777, await troveManager.baseRate());
       // harf-life = 40 mins
       const minDecayFactor = BigNumber.from("982820598545251060");
       const maxRedemptionFee = parseEther("0.4");
@@ -417,13 +422,6 @@ describe("TroveManager", () => {
         .to.be.revertedWith("Cannot change after sunset");
     });
 
-    const getWeekAndDay = (duration: BigNumber) => {
-      console.log(111, "duration:", duration.toNumber());
-      return {
-        week: duration.div(WEEK),
-        day: duration.mod(WEEK).div(DAY)
-      };
-    }
     it("getWeekAndDay", async () => {
       const duration = BigNumber.from(74 * DAY);
       const newNow = (await now()).add(duration);
