@@ -2,7 +2,8 @@ import { BigNumber } from "ethers";
 import { ZERO } from "./constant";
 import { MockTroveManager } from "../../../typechain-types";
 import { parseEther } from "ethers/lib/utils";
-import { min } from "./contract";
+import { abi, min } from "./contract";
+import { ethers } from "hardhat";
 
 export const gasCompensation = parseEther("200");
 export const PERCENT_DIVISOR = 200;
@@ -167,4 +168,10 @@ export function applyLiquidationValuesToTotals(totals: {
   totals.totalDebtToRedistribute = totals.totalDebtToRedistribute.add(singleLiquidation.debtToRedistribute);
   totals.totalCollToRedistribute = totals.totalCollToRedistribute.add(singleLiquidation.collToRedistribute);
   totals.totalCollSurplus = totals.totalCollSurplus.add(singleLiquidation.collSurplus);
+}
+
+export async function isTroveManagerEnabled(liquidationManager: string, addr: string) {
+  let pos = ethers.utils.solidityKeccak256(["uint256", "uint256"], [addr, 0]);
+  let data = await ethers.provider.getStorageAt(liquidationManager, pos);
+  return abi.decode(["bool"], data)[0];
 }

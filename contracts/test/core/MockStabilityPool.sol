@@ -18,4 +18,10 @@ contract MockStabilityPool {
         uint256 _debtToOffset,
         uint256 _collToAdd
     ) public {}
+
+    mapping(address => bool) public enabledColls;
+
+    function enableCollateral(address _collateral) public {
+        enabledColls[_collateral] = true;
+    }
 }

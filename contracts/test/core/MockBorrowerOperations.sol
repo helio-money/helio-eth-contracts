@@ -125,4 +125,13 @@ contract MockBorrowerOperations {
     {
         return (globalSysPricedColl, globalSysDebt);
     }
+
+    mapping(address => address) public managerToCollateral;
+
+    function configureCollateral(
+        address troveManager,
+        address collateralToken
+    ) public {
+        managerToCollateral[troveManager] = collateralToken;
+    }
 }

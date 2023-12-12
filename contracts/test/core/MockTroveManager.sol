@@ -267,4 +267,46 @@ contract MockTroveManager {
     function getTroveStatus(address _borrower) public view returns (uint256) {
         return uint256(Troves[_borrower].status);
     }
+
+    uint256 public minuteDecayFactor;
+    uint256 public redemptionFeeFloor;
+    uint256 public maxRedemptionFee;
+    uint256 public borrowingFeeFloor;
+    uint256 public maxBorrowingFee;
+    uint256 public interestRateInBPS;
+    uint256 public maxSystemDebt;
+
+    function setParameters(
+        uint256 _minuteDecayFactor,
+        uint256 _redemptionFeeFloor,
+        uint256 _maxRedemptionFee,
+        uint256 _borrowingFeeFloor,
+        uint256 _maxBorrowingFee,
+        uint256 _interestRateInBPS,
+        uint256 _maxSystemDebt,
+        uint256 _MCR
+    ) public {
+        minuteDecayFactor = _minuteDecayFactor;
+        redemptionFeeFloor = _redemptionFeeFloor;
+        maxRedemptionFee = _maxRedemptionFee;
+        borrowingFeeFloor = _borrowingFeeFloor;
+        maxBorrowingFee = _maxBorrowingFee;
+        interestRateInBPS = _interestRateInBPS;
+        maxSystemDebt = _maxSystemDebt;
+        MCR = _MCR;
+    }
+
+    address public priceFeedAddress;
+    address public sortedTrovesAddress;
+    address public collToken;
+
+    function setAddresses(
+        address _priceFeedAddress,
+        address _sortedTrovesAddress,
+        address _collateralToken
+    ) public {
+        priceFeedAddress = _priceFeedAddress;
+        sortedTrovesAddress = _sortedTrovesAddress;
+        collToken = _collateralToken;
+    }
 }

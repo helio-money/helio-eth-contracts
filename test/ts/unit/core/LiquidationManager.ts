@@ -10,10 +10,10 @@ import { parseEther } from "ethers/lib/utils";
 import { expect } from "chai";
 import {
   _1E18,
-  abi,
   applyLiquidationValuesToTotals,
   gasCompensation,
   initTotalsParam,
+  isTroveManagerEnabled,
   liquidateNormalMode,
   liquidateWithoutSP,
   min,
@@ -61,12 +61,6 @@ describe("LiquidationManager", () => {
     await liquidationManager.deployed();
   })
 
-  const isTroveManagerEnabled = async (addr: string) => {
-    let pos = ethers.utils.solidityKeccak256(["uint256", "uint256"], [addr, 0]);
-    let data = await ethers.provider.getStorageAt(liquidationManager.address, pos);
-    return abi.decode(["bool"], data)[0];
-  }
-
   describe("Deployment", () => {
     it("Should OK after deployment", async () => {
       expect(await liquidationManager.DEBT_GAS_COMPENSATION()).to.be.equal(gasCompensation);
@@ -78,9 +72,9 @@ describe("LiquidationManager", () => {
 
   describe("Functions", () => {
     it("enableTroveManager", async () => {
-      expect(await isTroveManagerEnabled(troveManager.address)).to.be.false;
+      expect(await isTroveManagerEnabled(liquidationManager.address, troveManager.address)).to.be.false;
       await liquidationManager.enableTroveManager(troveManager.address);
-      expect(await isTroveManagerEnabled(troveManager.address)).to.be.true;
+      expect(await isTroveManagerEnabled(liquidationManager.address, troveManager.address)).to.be.true;
 
       await expect(liquidationManager.connect(user1).enableTroveManager(troveManager.address)).to.be.revertedWith("Not factory");
     });
@@ -402,7 +396,6 @@ describe("LiquidationManager", () => {
       await troveManager.setICR(id1, MCR.sub(parseEther("0.01")));
       await troveManager.setICR(id2, _1E18.sub(1));
       await troveManager.setICR(id3, _1E18);
-      // await troveManager.setICR(id4, MCR);
       await troveManager.setTroveOwnersCount(4);
       const globalSysPricedColl = BigNumber.from("1856399999999999908567389094712105238528");
       const globalSysDebt = parseEther("1428");
@@ -414,19 +407,14 @@ describe("LiquidationManager", () => {
       await stabilityPool.setTotalDebt(totalDebtInSP2);
       const singleLiq1 = await tryLiquidateWithCap(troveManager, id, totalDebtInSP2, MCR, price);
       totalDebtInSP2 = totalDebtInSP2.sub(singleLiq1.debtToOffset);
-      // console.log(111, singleLiq1.debtToOffset);
       applyLiquidationValuesToTotals(totals3, singleLiq1);
 
       const singleLiq2 = await liquidateWithoutSP(troveManager, id1);
       totalDebtInSP2 = totalDebtInSP2.sub(singleLiq2.debtToOffset);
-      // console.log(111, singleLiq2.debtToOffset);
       applyLiquidationValuesToTotals(totals3, singleLiq2);
 
       const singleLiq3 = await liquidateNormalMode(troveManager, id2, totalDebtInSP2, sunsetting);
-      // totalDebtInSP2 = totalDebtInSP2.sub(singleLiq3.debtToOffset);
-      // console.log(111, singleLiq3.debtToOffset);
       applyLiquidationValuesToTotals(totals3, singleLiq3);
-      // console.log(111, totals2)
 
       const tx3 = await liquidationManager.batchLiquidateTroves(troveManager.address, [id, id1, id2, id3]);
       await expect(tx3).to.emit(liquidationManager, "Liquidation")
@@ -442,7 +430,6 @@ describe("LiquidationManager", () => {
       // await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
       // await troveManager.setTroveOwnersCount(1);
       // const tx4 = await liquidationManager.liquidate(troveManager.address, id);
-
     });
   })
 });

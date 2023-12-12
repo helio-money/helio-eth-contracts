@@ -39,4 +39,10 @@ contract MockSortedTroves {
             last = prev;
         }
     }
+
+    address public troveManager;
+
+    function setAddresses(address _troveManagerAddress) public {
+        troveManager = _troveManagerAddress;
+    }
 }

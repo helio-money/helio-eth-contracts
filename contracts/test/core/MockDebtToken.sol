@@ -109,4 +109,10 @@ contract MockDebtToken is ERC20 {
         _burn(_account, _amount);
         return true;
     }
+
+    mapping(address => bool) public enabledTroveManagers;
+
+    function enableTroveManager(address _troveManager) public {
+        enabledTroveManagers[_troveManager] = true;
+    }
 }
