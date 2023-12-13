@@ -1,3 +1,4 @@
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 
 export const ZERO_ADDRESS = ethers.constants.AddressZero;
@@ -15,3 +16,5 @@ export const ETHER = ethers.utils.parseEther("1");
 
 export const _1E9 = GWEI;
 export const _1E18 = ETHER;
+
+export const MAX_UINT16 = BigNumber.from(2 ** 16 - 1);

@@ -3,7 +3,7 @@ import { Signer } from "ethers";
 import { getContractAddress } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 import { BoostCalculator, EmissionSchedule, ListaCore, ListaVault, MockEmissionReceiver, MockIncentiveVoting, MockListaToken, TokenLocker } from "../../../../typechain-types";
-import { ETHER, WEEK, ZERO_ADDRESS, _1E18, increase } from "../../utils";
+import { ETHER, MAX_UINT16, WEEK, ZERO_ADDRESS, _1E18, increase } from "../../utils";
 
 describe("ListaVault Contract", async () => {
   // constants
@@ -338,7 +338,6 @@ describe("ListaVault Contract", async () => {
     });
   });
 
-  // TODO
   describe("transferAllocatedTokens()", async () => {
     beforeEach(async () => {
       await listaVault.registerNewReceiver();
@@ -365,11 +364,12 @@ describe("ListaVault Contract", async () => {
     });
 
     it("Should OK if amount is 0", async () => {
-      // const tx = await listaVault.transferAllocatedTokens();
-      // await expect()
+      const tx = await listaVault.transferAllocatedTokens(ZERO_ADDRESS, ZERO_ADDRESS, 0);
+      await expect(tx)
+        .not.to.be.emit(listaVault, "UnallocatedSupplyIncreased");
     });
 
-    it("Should OK", async () => {
+    it("Should OK without boostUnclaimed", async () => {
       // init parameters
       await listaVault.connect(manager).setInitialParameters(
         emissionSchedule.address,
@@ -389,13 +389,38 @@ describe("ListaVault Contract", async () => {
 
       await mockEmissionReceiver.allocateNewEmissions(1);
 
-      await mockEmissionReceiver.transferAllocatedTokens(user1.getAddress(), user2.getAddress(), ETHER);
+      const tx = await mockEmissionReceiver.transferAllocatedTokens(user1.getAddress(), user2.getAddress(), ETHER);
+      await expect(tx).not.to.be.emit(listaVault, "UnallocatedSupplyIncreased");
 
       // check transfer
+      expect(await listaToken.balanceOf(user2.getAddress())).to.be.equal(ETHER);
+    });
+
+    it("Should OK with boostUnclaimed", async () => {
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        0,
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+      await listaVault.registerReceiver(mockEmissionReceiver.address, 1);
+      await listaVault.setEmissionSchedule(emissionSchedule.address);
+      await listaVault.setReceiverIsActive(1, true);
+      await increase(WEEK * 20);
+
+      // mock pct
+      await incentiveVoting.mockSetReceiverVotePct(1, 2, ETHER);
+
+      await mockEmissionReceiver.allocateNewEmissions(1);
+
+      const tx = await mockEmissionReceiver.transferAllocatedTokens(user1.getAddress(), user2.getAddress(), ETHER);
+      await expect(tx).to.be.emit(listaVault, "UnallocatedSupplyIncreased");
     });
   });
 
-  // TODO
   describe("batchClaimRewards()", async () => {
     beforeEach(async () => {
       await listaVault.registerNewReceiver();
@@ -406,7 +431,9 @@ describe("ListaVault Contract", async () => {
         .to.be.revertedWith("Invalid maxFeePct");
     });
 
-    it("Should OK", async () => {
+    it("Should revert if delegation callback is disabled", async () => {
+      await mockEmissionReceiver.setBoostDelegationParams(false, 5000, mockEmissionReceiver.address);
+
       // init parameters
       await listaVault.connect(manager).setInitialParameters(
         emissionSchedule.address,
@@ -426,7 +453,122 @@ describe("ListaVault Contract", async () => {
 
       await mockEmissionReceiver.allocateNewEmissions(1);
 
-      await mockEmissionReceiver.batchClaimRewards(user1.getAddress(), ZERO_ADDRESS, [mockEmissionReceiver.address], 0);
+      await expect(mockEmissionReceiver.batchClaimRewards(user1.getAddress(), mockEmissionReceiver.address, [mockEmissionReceiver.address], 10000))
+        .to.be.revertedWith("Invalid delegate");
+    });
+
+    it("Should revert if feePct is greater then 10000", async () => {
+      await mockEmissionReceiver.setBoostDelegationParams(true, MAX_UINT16, mockEmissionReceiver.address);
+      await mockEmissionReceiver.setFeePct(10001);
+
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        0,
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+      await listaVault.registerReceiver(mockEmissionReceiver.address, 1);
+      await listaVault.setEmissionSchedule(emissionSchedule.address);
+      await listaVault.setReceiverIsActive(1, true);
+      await increase(WEEK * 2);
+
+      // mock pct
+      await incentiveVoting.mockSetReceiverVotePct(1, 2, ETHER);
+
+      await mockEmissionReceiver.allocateNewEmissions(1);
+
+      await expect(mockEmissionReceiver.batchClaimRewards(user1.getAddress(), mockEmissionReceiver.address, [mockEmissionReceiver.address], 10000))
+        .to.be.revertedWith("Invalid delegate fee");
+    });
+
+    it("Should OK with boostDelegate and fee is 0", async () => {
+      await mockEmissionReceiver.setBoostDelegationParams(true, MAX_UINT16, mockEmissionReceiver.address);
+      await mockEmissionReceiver.setFeePct(0);
+
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        0,
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+      await listaVault.registerReceiver(mockEmissionReceiver.address, 1);
+      await listaVault.setEmissionSchedule(emissionSchedule.address);
+      await listaVault.setReceiverIsActive(1, true);
+      await increase(WEEK * 2);
+
+      // mock pct
+      await incentiveVoting.mockSetReceiverVotePct(1, 2, ETHER);
+
+      await mockEmissionReceiver.allocateNewEmissions(1);
+
+      await mockEmissionReceiver.batchClaimRewards(user1.getAddress(), mockEmissionReceiver.address, [mockEmissionReceiver.address], 10000);
+
+      expect(await listaToken.balanceOf(user1.getAddress()))
+        .to.be.equal(ETHER);
+    });
+
+    it("Should lock with boostDelegate", async () => {
+      await mockEmissionReceiver.setBoostDelegationParams(true, MAX_UINT16, mockEmissionReceiver.address);
+      await mockEmissionReceiver.setFeePct(0);
+
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        1, // lock weeks is not 0
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+      await listaVault.registerReceiver(mockEmissionReceiver.address, 1);
+      await listaVault.setEmissionSchedule(emissionSchedule.address);
+      await listaVault.setReceiverIsActive(1, true);
+      await increase(WEEK * 2);
+
+      // mock pct
+      await incentiveVoting.mockSetReceiverVotePct(1, 2, ETHER);
+
+      await mockEmissionReceiver.allocateNewEmissions(1);
+
+      await mockEmissionReceiver.batchClaimRewards(user1.getAddress(), mockEmissionReceiver.address, [mockEmissionReceiver.address], 10000);
+
+      expect(await listaToken.balanceOf(user1.getAddress()))
+        .to.be.equal(0);
+    });
+
+    it("Should OK with boostDelegate and fee is not 0", async () => {
+      await mockEmissionReceiver.setBoostDelegationParams(true, MAX_UINT16, mockEmissionReceiver.address);
+      await mockEmissionReceiver.setFeePct(10000);
+
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        0,
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+      await listaVault.registerReceiver(mockEmissionReceiver.address, 1);
+      await listaVault.setEmissionSchedule(emissionSchedule.address);
+      await listaVault.setReceiverIsActive(1, true);
+      await increase(WEEK * 2);
+
+      // mock pct
+      await incentiveVoting.mockSetReceiverVotePct(1, 2, ETHER);
+
+      await mockEmissionReceiver.allocateNewEmissions(1);
+
+      await mockEmissionReceiver.batchClaimRewards(user1.getAddress(), mockEmissionReceiver.address, [mockEmissionReceiver.address], 10000);
+
+      expect(await listaToken.balanceOf(user1.getAddress()))
+        .to.be.equal(0);
     });
   });
 
@@ -436,18 +578,153 @@ describe("ListaVault Contract", async () => {
         .to.be.revertedWith("Nothing to claim");
     });
 
+    it("Should revert when nothing to claim", async () => {
+      await expect(listaVault.claimBoostDelegationFees(user1.getAddress()))
+        .to.be.rejectedWith("Nothing to claim");
+    });
+
+    // TODO
     it("Should OK", async () => { });
   });
 
-  // TODO
-  describe("claimableRewardAfterBoost()", async () => { });
+  describe("claimableRewardAfterBoost()", async () => {
+    it("Should OK without boostDelegate", async () => {
+      // prepare
+      await listaVault.registerNewReceiver();
 
-  // TODO
-  describe("setBoostDelegationParams()", async () => { });
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        0,
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+      await listaVault.registerReceiver(mockEmissionReceiver.address, 1);
+      await listaVault.setEmissionSchedule(emissionSchedule.address);
+      await listaVault.setReceiverIsActive(1, true);
+      await increase(WEEK * 2);
 
-  // TODO
-  describe("getClaimableWithBoost()", async () => { });
+      // mock pct
+      await incentiveVoting.mockSetReceiverVotePct(1, 2, ETHER);
 
-  // TODO
-  describe("claimableBoostDelegationFees()", async () => { });
+      await mockEmissionReceiver.allocateNewEmissions(1);
+
+      // claimableRewardAfterBoost
+      const [adjustedAmount, feeToDelegate] = await listaVault.claimableRewardAfterBoost(
+        mockEmissionReceiver.address,
+        mockEmissionReceiver.address,
+        ZERO_ADDRESS,
+        mockEmissionReceiver.address,
+      );
+
+      expect(adjustedAmount).to.be.equal(ETHER);
+      expect(feeToDelegate).to.be.equal(0);
+    });
+
+    it("Should OK with boostDelegate", async () => {
+      // prepare
+      await listaVault.registerNewReceiver();
+      await mockEmissionReceiver.setBoostDelegationParams(true, MAX_UINT16, mockEmissionReceiver.address);
+      await mockEmissionReceiver.setFeePct(10000);
+
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        0,
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+      await listaVault.registerReceiver(mockEmissionReceiver.address, 1);
+      await listaVault.setEmissionSchedule(emissionSchedule.address);
+      await listaVault.setReceiverIsActive(1, true);
+      await increase(WEEK * 2);
+
+      // mock pct
+      await incentiveVoting.mockSetReceiverVotePct(1, 2, ETHER);
+
+      await mockEmissionReceiver.allocateNewEmissions(1);
+
+      // claimableRewardAfterBoost
+      const [adjustedAmount, feeToDelegate] = await listaVault.claimableRewardAfterBoost(
+        mockEmissionReceiver.address,
+        mockEmissionReceiver.address,
+        mockEmissionReceiver.address,
+        mockEmissionReceiver.address,
+      );
+
+      expect(adjustedAmount).to.be.equal(ETHER);
+      expect(feeToDelegate).to.be.equal(ETHER);
+    });
+  });
+
+  describe("setBoostDelegationParams()", async () => {
+    it("Should revert if isEnabled is true and feePct is greater than 10000", async () => {
+      await expect(mockEmissionReceiver.setBoostDelegationParams(true, 10001, mockEmissionReceiver.address))
+        .to.be.revertedWith("Invalid feePct");
+    });
+
+    it("Should revert if callback is not contract", async () => {
+      await expect(mockEmissionReceiver.setBoostDelegationParams(true, 5000, user1.getAddress()))
+        .to.be.revertedWith("Callback must be a contract");
+
+      await expect(mockEmissionReceiver.setBoostDelegationParams(true, MAX_UINT16, ZERO_ADDRESS))
+        .to.be.revertedWith("Callback must be a contract");
+    });
+
+    it("Should OK if callback is ZERO_ADDRESS", async () => {
+      await expect(mockEmissionReceiver.setBoostDelegationParams(true, 5000, ZERO_ADDRESS))
+        .not.to.be.revertedWith("Callback must be a contract");
+    });
+
+    it("Should OK if feePct is maxUint16", async () => {
+      const tx = await mockEmissionReceiver.setBoostDelegationParams(true, MAX_UINT16, mockEmissionReceiver.address);
+      await expect(tx)
+        .to.be.emit(listaVault, "BoostDelegationSet").withArgs(mockEmissionReceiver.address, true, MAX_UINT16, mockEmissionReceiver.address);
+    });
+
+    it("Should OK enable the boostDelegation", async () => {
+      const tx = await mockEmissionReceiver.setBoostDelegationParams(true, 5000, mockEmissionReceiver.address);
+      await expect(tx)
+        .to.be.emit(listaVault, "BoostDelegationSet").withArgs(mockEmissionReceiver.address, true, 5000, mockEmissionReceiver.address);
+    });
+
+    it("Should OK disable the boostDelegation", async () => {
+      const tx = await mockEmissionReceiver.setBoostDelegationParams(false, 5000, mockEmissionReceiver.address);
+      await expect(tx)
+        .to.be.emit(listaVault, "BoostDelegationSet").withArgs(mockEmissionReceiver.address, false, 5000, mockEmissionReceiver.address);
+    });
+  });
+
+  describe("getClaimableWithBoost()", async () => {
+    it("Should revert if boostCalculator is zero address", async () => {
+      await expect(listaVault.getClaimableWithBoost(mockEmissionReceiver.address))
+        .to.be.revertedWithoutReason();
+    });
+
+    it("Should OK", async () => {
+      // init parameters
+      await listaVault.connect(manager).setInitialParameters(
+        emissionSchedule.address,
+        boostCalculator.address,
+        ETHER.mul(10000),
+        0,
+        [ETHER, ETHER, ETHER, ETHER],
+        [],
+      );
+
+      await expect(listaVault.getClaimableWithBoost(mockEmissionReceiver.address))
+        .not.to.be.reverted;
+    });
+  });
+
+  describe("claimableBoostDelegationFees()", async () => {
+    it("Should OK", async () => {
+      await expect(listaVault.claimableBoostDelegationFees(user1.getAddress()))
+        .not.to.be.reverted;
+    });
+  });
 });

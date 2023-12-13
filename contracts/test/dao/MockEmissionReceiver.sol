@@ -9,9 +9,11 @@ import "../../interfaces/IVault.sol";
  * @notice Mock contract for testing purposes.
  */
 contract MockEmissionReceiver {
-    event RegisteredIdNotified(uint256[] assignedIds);
-
     IListaVault public vault;
+    uint256 public feePct;
+
+    event RegisteredIdNotified(uint256[] assignedIds);
+    event DelegatedBoostCallbackCalled();
 
     function notifyRegisteredId(
         uint256[] memory assignedIds
@@ -60,5 +62,40 @@ contract MockEmissionReceiver {
                 rewardContracts,
                 maxFeePct
             );
+    }
+
+    function setFeePct(uint256 _feePct) external {
+        feePct = _feePct;
+    }
+
+    function getFeePct(
+        address claimant,
+        address receiver,
+        uint amount,
+        uint previousAmount,
+        uint totalWeeklyEmissions
+    ) external view returns (uint256) {
+        return feePct;
+    }
+
+    function delegatedBoostCallback(
+        address claimant,
+        address receiver,
+        uint amount,
+        uint adjustedAmount,
+        uint fee,
+        uint previousAmount,
+        uint totalWeeklyEmissions
+    ) external returns (bool success) {
+        emit DelegatedBoostCallbackCalled();
+        return true;
+    }
+
+    function setBoostDelegationParams(
+        bool isEnabled,
+        uint256 _feePct,
+        address callback
+    ) external returns (bool) {
+        return vault.setBoostDelegationParams(isEnabled, _feePct, callback);
     }
 }
