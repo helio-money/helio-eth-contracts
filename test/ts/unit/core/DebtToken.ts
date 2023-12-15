@@ -6,7 +6,7 @@ import { parseEther } from "ethers/lib/utils";
 import { expect } from "chai";
 import { abi, DAY, ZERO_ADDRESS } from "../../utils";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
-import {TypedDataSigner, VoidSigner} from "@ethersproject/abstract-signer/src.ts";
+import { TypedDataSigner, VoidSigner } from "@ethersproject/abstract-signer/src.ts";
 
 describe("DebtToken", () => {
   let stabilityPool: Signer;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.19;
+
 import "../../interfaces/IAggregatorV3Interface.sol";
 
 contract MockAggregator is IAggregatorV3Interface {
@@ -55,12 +56,22 @@ contract MockAggregator is IAggregatorV3Interface {
         return decimalsVal;
     }
 
+    bool shouldRevert;
+
+    function setShouldRevert(bool value) public {
+        shouldRevert = value;
+    }
+
     function latestRoundData()
         external
         view
         override
         returns (uint80, int256, uint256, uint256, uint80)
     {
+        if (shouldRevert) {
+            require(false, "revert test");
+        }
+
         uint256 timestamp = priceIsAlwaysUpToDate
             ? block.timestamp - 2 minutes
             : updatedAt;

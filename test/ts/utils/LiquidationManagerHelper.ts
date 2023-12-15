@@ -2,8 +2,9 @@ import { BigNumber } from "ethers";
 import { ZERO } from "./constant";
 import { MockTroveManager } from "../../../typechain-types";
 import { parseEther } from "ethers/lib/utils";
-import { abi, min } from "./contract";
+import { abi } from "./contract";
 import { ethers } from "hardhat";
+import { min } from "./math";
 
 export const gasCompensation = parseEther("200");
 export const PERCENT_DIVISOR = 200;

@@ -7,7 +7,6 @@ import {
   MockTroveManager
 } from "../../../../typechain-types";
 import { parseEther } from "ethers/lib/utils";
-import { expect } from "chai";
 import {
   _1E18,
   applyLiquidationValuesToTotals,
@@ -16,11 +15,12 @@ import {
   isTroveManagerEnabled,
   liquidateNormalMode,
   liquidateWithoutSP,
-  min,
   PERCENT_DIVISOR,
   tryLiquidateWithCap,
   ZERO
 } from "../../utils";
+import { expect } from "chai";
+import { computeCR, min } from "../../utils/math";
 
 describe("LiquidationManager", () => {
   let stabilityPool: Contract;
@@ -322,10 +322,141 @@ describe("LiquidationManager", () => {
       await troveManager.setPrice(price);
       const singleLiquidation = await tryLiquidateWithCap(troveManager, id, totalDebtInSP, MCR, price);
 
-      const tx3 = await liquidationManager.liquidateTroves(troveManager.address, 100, maxICR);
-      await expect(tx3).to.emit(liquidationManager, "Liquidation")
+      const tx = await liquidationManager.liquidateTroves(troveManager.address, 100, maxICR);
+      await expect(tx).to.emit(liquidationManager, "Liquidation")
         .withArgs(
           entireDebt,
+          singleLiquidation.entireTroveColl.sub(singleLiquidation.collGasCompensation).sub(singleLiquidation.collSurplus),
+          singleLiquidation.collGasCompensation,
+          gasCompensation
+        );
+    });
+
+    it("liquidateTroves with ICR > maxICR", async () => {
+      let totalDebtInSP = parseEther("300");
+      await stabilityPool.setTotalDebt(totalDebtInSP);
+      await liquidationManager.enableTroveManager(troveManager.address);
+      const price = parseEther("0.11");
+      await troveManager.setPrice(price);
+      const pendingCollReward = parseEther("10");
+      const pendingDebtReward = parseEther("5");
+      await troveManager.setPendingRewards(pendingCollReward, pendingDebtReward);
+
+      const trove = { debt: parseEther("20"), coll: parseEther("300") };
+      await troveManager.setUserTrove(id, trove.coll, trove.debt);
+
+      const MCR = parseEther("1");
+      await troveManager.setMCR(MCR);
+      const maxICR = parseEther("1.5");
+
+      await troveManager.setICR(id, parseEther("1.1"))
+      await sortedTroves.setLast(id);
+      await troveManager.setICR(id1, maxICR.add(1));
+      await troveManager.setICR(id2, maxICR.add(1));
+      await sortedTroves.setPrevId(id, id1);
+      await sortedTroves.setPrevId(id1, id2);
+
+      await troveManager.setTroveOwnersCount(4);
+      const globalSysPricedColl = BigNumber.from("1856399999999999908567389094712105238528");
+      const globalSysDebt = parseEther("1428");
+      await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
+
+      const singleLiquidation = await tryLiquidateWithCap(troveManager, id, totalDebtInSP, MCR, price);
+      const totals = initTotalsParam();
+      applyLiquidationValuesToTotals(totals, singleLiquidation);
+
+      const tx = await liquidationManager.liquidateTroves(troveManager.address, 100, maxICR);
+      await expect(tx).to.emit(liquidationManager, "Liquidation")
+        .withArgs(
+          totals.totalDebtInSequence,
+          singleLiquidation.entireTroveColl.sub(singleLiquidation.collGasCompensation).sub(singleLiquidation.collSurplus),
+          singleLiquidation.collGasCompensation,
+          gasCompensation
+        );
+    });
+
+    it("liquidateTroves with ICR >= TCR", async () => {
+      let totalDebtInSP = parseEther("300");
+      await stabilityPool.setTotalDebt(totalDebtInSP);
+      await liquidationManager.enableTroveManager(troveManager.address);
+      const price = parseEther("0.11");
+      await troveManager.setPrice(price);
+      const pendingCollReward = parseEther("10");
+      const pendingDebtReward = parseEther("5");
+      await troveManager.setPendingRewards(pendingCollReward, pendingDebtReward);
+
+      const globalSysPricedColl = BigNumber.from("1856399999999999908567389094712105238528");
+      const globalSysDebt = parseEther("1428");
+      await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
+
+      const trove = { debt: parseEther("20"), coll: parseEther("300") };
+      await troveManager.setUserTrove(id, trove.coll, trove.debt);
+
+      const TCR = computeCR(globalSysPricedColl, globalSysDebt);
+      const MCR = parseEther("1");
+      await troveManager.setMCR(MCR);
+      const maxICR = parseEther("1.5");
+
+      await troveManager.setICR(id, parseEther("1.1"))
+      await sortedTroves.setLast(id);
+      await troveManager.setICR(id1, TCR);
+      await troveManager.setICR(id2, maxICR.add(1));
+      await sortedTroves.setPrevId(id, id1);
+      await sortedTroves.setPrevId(id1, id2);
+
+      await troveManager.setTroveOwnersCount(4);
+
+      const singleLiquidation = await tryLiquidateWithCap(troveManager, id, totalDebtInSP, MCR, price);
+      const totals = initTotalsParam();
+      applyLiquidationValuesToTotals(totals, singleLiquidation);
+
+      const tx = await liquidationManager.liquidateTroves(troveManager.address, 100, maxICR);
+      await expect(tx).to.emit(liquidationManager, "Liquidation")
+        .withArgs(
+          totals.totalDebtInSequence,
+          singleLiquidation.entireTroveColl.sub(singleLiquidation.collGasCompensation).sub(singleLiquidation.collSurplus),
+          singleLiquidation.collGasCompensation,
+          gasCompensation
+        );
+    });
+
+    it("liquidateTroves with debtToOffset == 0", async () => {
+      let totalDebtInSP = parseEther("300");
+      await stabilityPool.setTotalDebt(totalDebtInSP);
+      await liquidationManager.enableTroveManager(troveManager.address);
+      const price = parseEther("0.11");
+      await troveManager.setPrice(price);
+      await troveManager.setPendingRewards(ZERO, ZERO);
+
+      const globalSysPricedColl = BigNumber.from("1856399999999999908567389094712105238528");
+      const globalSysDebt = parseEther("1428");
+      await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
+
+      const trove = { debt: ZERO, coll: parseEther("300") };
+      await troveManager.setUserTrove(id, trove.coll, trove.debt);
+      const trove1 = { debt: parseEther("10"), coll: parseEther("300") };
+      await troveManager.setUserTrove(id1, trove1.coll, trove1.debt);
+
+      const TCR = computeCR(globalSysPricedColl, globalSysDebt);
+      const MCR = parseEther("1");
+      await troveManager.setMCR(MCR);
+      const maxICR = parseEther("1.5");
+
+      await troveManager.setICR(id, parseEther("1.1"))
+      await sortedTroves.setLast(id);
+      await troveManager.setICR(id1, TCR.sub(1));
+      await sortedTroves.setPrevId(id, id1);
+
+      await troveManager.setTroveOwnersCount(2);
+
+      const singleLiquidation = await tryLiquidateWithCap(troveManager, id1, totalDebtInSP, MCR, price);
+      const totals = initTotalsParam();
+      applyLiquidationValuesToTotals(totals, singleLiquidation);
+
+      const tx = await liquidationManager.liquidateTroves(troveManager.address, 100, maxICR);
+      await expect(tx).to.emit(liquidationManager, "Liquidation")
+        .withArgs(
+          totals.totalDebtInSequence,
           singleLiquidation.entireTroveColl.sub(singleLiquidation.collGasCompensation).sub(singleLiquidation.collSurplus),
           singleLiquidation.collGasCompensation,
           gasCompensation
@@ -355,15 +486,15 @@ describe("LiquidationManager", () => {
       // 1. ICR <= 100%
       expect(ICR).to.be.lte(_1E18);
       const singleLiqParam = await liquidateWithoutSP(troveManager, id);
-      const totalsParam = initTotalsParam();
-      await applyLiquidationValuesToTotals(totalsParam, singleLiqParam);
+      const totals1 = initTotalsParam();
+      applyLiquidationValuesToTotals(totals1, singleLiqParam);
       const tx = await liquidationManager.batchLiquidateTroves(troveManager.address, troveArray);
       await expect(tx).to.emit(liquidationManager, "Liquidation")
         .withArgs(
-          totalsParam.totalDebtInSequence,
-          totalsParam.totalCollInSequence.sub(totalsParam.totalCollGasCompensation).sub(totalsParam.totalCollSurplus),
-          totalsParam.totalCollGasCompensation,
-          totalsParam.totalDebtGasCompensation
+          totals1.totalDebtInSequence,
+          totals1.totalCollInSequence.sub(totals1.totalCollGasCompensation).sub(totals1.totalCollSurplus),
+          totals1.totalCollGasCompensation,
+          totals1.totalDebtGasCompensation
         );
       await expect(liquidationManager.liquidate(troveManager.address, id)).to.be.not.reverted;
       await expect(liquidationManager.connect(user2).liquidate(troveManager.address, id1)).to.be.revertedWith("TroveManager: Trove does not exist or is closed");
@@ -379,7 +510,7 @@ describe("LiquidationManager", () => {
 
       let singleLiqParam2 = await liquidateNormalMode(troveManager, id, totalDebtInSP, sunsetting);
       const totals2 = initTotalsParam();
-      await applyLiquidationValuesToTotals(totals2, singleLiqParam2);
+      applyLiquidationValuesToTotals(totals2, singleLiqParam2);
 
       const tx2 = await liquidationManager.batchLiquidateTroves(troveManager.address, troveArray);
       await expect(tx2).to.emit(liquidationManager, "Liquidation")
@@ -424,12 +555,123 @@ describe("LiquidationManager", () => {
           totals3.totalCollGasCompensation,
           totals3.totalDebtGasCompensation
         );
+    });
 
-      // 4. liquidate call
-      // await troveManager.setICR(id, _1E18.sub(1));
-      // await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
-      // await troveManager.setTroveOwnersCount(1);
-      // const tx4 = await liquidationManager.liquidate(troveManager.address, id);
+    it("batchLiquidateTroves sunsetting trove", async () => {
+      await liquidationManager.enableTroveManager(troveManager.address);
+
+      const totalDebtInSP = parseEther("5000");
+      await stabilityPool.setTotalDebt(totalDebtInSP);
+      const price = parseEther("0.11");
+      await troveManager.setPrice(price);
+      const trove = { debt: parseEther("20"), coll: parseEther("300") };
+      await troveManager.setUserTrove(id, trove.coll, trove.debt);
+      const pendingCollReward = parseEther("10");
+      const pendingDebtReward = parseEther("5");
+      await troveManager.setPendingRewards(pendingCollReward, pendingDebtReward);
+      const MCR = parseEther("1.1");
+      await troveManager.setMCR(MCR);
+
+      const ICR = MCR.add(1);
+      await troveManager.setICR(id, ICR);
+      await troveManager.setICR(id1, MCR.sub(parseEther("0.01")));
+      await troveManager.setTroveOwnersCount(2);
+      const globalSysPricedColl = BigNumber.from("1856399999999999908567389094712105238528");
+      const globalSysDebt = parseEther("1428");
+      await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
+      expect(await troveManager.getCurrentICR(id, ZERO)).to.be.gte(MCR);
+
+      let totals = initTotalsParam();
+      const singleLiq = await liquidateNormalMode(troveManager, id1, totalDebtInSP, true);
+      applyLiquidationValuesToTotals(totals, singleLiq);
+
+      await troveManager.setSunsetting(true);
+      const tx = await liquidationManager.batchLiquidateTroves(troveManager.address, [id, id1]);
+      await expect(tx).to.emit(liquidationManager, "Liquidation")
+        .withArgs(
+          totals.totalDebtInSequence,
+          totals.totalCollInSequence.sub(totals.totalCollGasCompensation).sub(totals.totalCollSurplus),
+          totals.totalCollGasCompensation,
+          totals.totalDebtGasCompensation
+        );
+    });
+
+    it("batchLiquidateTroves with TCR continue", async () => {
+      await liquidationManager.enableTroveManager(troveManager.address);
+
+      const totalDebtInSP = parseEther("5000");
+      await stabilityPool.setTotalDebt(totalDebtInSP);
+      const price = parseEther("0.11");
+      await troveManager.setPrice(price);
+      const trove = { debt: parseEther("20"), coll: parseEther("300") };
+      await troveManager.setUserTrove(id, trove.coll, trove.debt);
+      const pendingCollReward = parseEther("10");
+      const pendingDebtReward = parseEther("5");
+      await troveManager.setPendingRewards(pendingCollReward, pendingDebtReward);
+      const MCR = parseEther("1.1");
+      await troveManager.setMCR(MCR);
+
+      const ICR = parseEther("1.3");
+      await troveManager.setICR(id, ICR);
+      await troveManager.setICR(id1, MCR.sub(parseEther("0.01")));
+      const troveArray = [id, id1];
+      await troveManager.setTroveOwnersCount(troveArray.length);
+      const globalSysPricedColl = BigNumber.from("1856399999999999908567389094712105238528");
+      const globalSysDebt = parseEther("1428");
+      await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
+      expect(await troveManager.getCurrentICR(id, ZERO)).to.be.gte(MCR);
+
+      let totals = initTotalsParam();
+      const singleLiq = await liquidateNormalMode(troveManager, id1, totalDebtInSP, true);
+      applyLiquidationValuesToTotals(totals, singleLiq);
+
+      const tx = await liquidationManager.batchLiquidateTroves(troveManager.address, troveArray);
+      await expect(tx).to.emit(liquidationManager, "Liquidation")
+        .withArgs(
+          totals.totalDebtInSequence,
+          totals.totalCollInSequence.sub(totals.totalCollGasCompensation).sub(totals.totalCollSurplus),
+          totals.totalCollGasCompensation,
+          totals.totalDebtGasCompensation
+        );
+    });
+
+    it("batchLiquidateTroves with debtToOffset == 0", async () => {
+      await liquidationManager.enableTroveManager(troveManager.address);
+
+      let totalDebtInSP = parseEther("20");
+      await stabilityPool.setTotalDebt(totalDebtInSP);
+      const price = parseEther("0.11");
+      await troveManager.setPrice(price);
+      const trove = { debt: parseEther("20"), coll: parseEther("300") };
+      await troveManager.setUserTrove(id, trove.coll, trove.debt);
+      const pendingCollReward = parseEther("10");
+      const pendingDebtReward = parseEther("5");
+      await troveManager.setPendingRewards(pendingCollReward, pendingDebtReward);
+      const MCR = parseEther("1.1");
+      await troveManager.setMCR(MCR);
+
+      const ICR = MCR.add(1);
+      await troveManager.setICR(id, ICR);
+      await troveManager.setICR(id1, MCR.sub(parseEther("0.01")));
+      const troveArray = [id, id1];
+      await troveManager.setTroveOwnersCount(troveArray.length);
+      const globalSysPricedColl = BigNumber.from("1856399999999999908567389094712105238528");
+      const globalSysDebt = parseEther("1428");
+      await borrowOperations.setGlobalSystemBalances(globalSysPricedColl, globalSysDebt);
+      expect(await troveManager.getCurrentICR(id, ZERO)).to.be.gte(MCR);
+
+      let totals = initTotalsParam();
+      const singleLiq = await liquidateNormalMode(troveManager, id1, totalDebtInSP, true);
+      applyLiquidationValuesToTotals(totals, singleLiq);
+
+      const tx = await liquidationManager.batchLiquidateTroves(troveManager.address, troveArray);
+      await expect(tx).to.emit(liquidationManager, "Liquidation")
+        .withArgs(
+          totals.totalDebtInSequence,
+          totals.totalCollInSequence.sub(totals.totalCollGasCompensation).sub(totals.totalCollSurplus),
+          totals.totalCollGasCompensation,
+          totals.totalDebtGasCompensation
+        );
     });
   })
-});
+})

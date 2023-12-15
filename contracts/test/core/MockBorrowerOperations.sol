@@ -16,6 +16,7 @@ contract MockBorrowerOperations {
     uint256 public TCR;
     uint256 public globalSysPricedColl;
     uint256 public globalSysDebt;
+    uint256 public minNetDebt;
 
     function setAddresses(
         InternalTroveManager value,
@@ -133,5 +134,9 @@ contract MockBorrowerOperations {
         address collateralToken
     ) public {
         managerToCollateral[troveManager] = collateralToken;
+    }
+
+    function setMinNetDebt(uint256 value) public {
+        minNetDebt = value;
     }
 }

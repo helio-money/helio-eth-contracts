@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { BigNumber, Contract, Signer } from "ethers";
 import { InternalStabilityPool, MockDebtToken, MockListaCore } from "../../../../typechain-types";
-import { DAY, ETHER, HOUR, WEEK, ZERO, _1E18, abi, encodeCallData } from "../../utils";
+import { _1E18, abi, DAY, encodeCallData, ETHER, HOUR, WEEK, ZERO, ZERO_ADDRESS } from "../../utils";
 
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
@@ -86,6 +86,18 @@ describe("StabilityPool", () => {
       expect(await stabilityPool.vault()).to.be.equal(listaVault.address);
       expect(await stabilityPool.factory()).to.be.equal(fakeFactory);
       expect(await stabilityPool.liquidationManager()).to.be.equal(fakeLiquidationManager);
+    });
+
+    it("Should revert if not owner", async () => {
+      const fakeAddress = "0x49518B55ED4404e7C553dB21CB1116F40720b6ae";
+      const errorMessage = "Only owner";
+      const sp = stabilityPool.connect(user1);
+
+      await expect(sp.setDebtToken(fakeAddress)).to.be.revertedWith(errorMessage);
+      await expect(sp.setVault(fakeAddress)).to.be.revertedWith(errorMessage);
+      await expect(sp.setFactory(fakeAddress)).to.be.revertedWith(errorMessage);
+      await expect(sp.setLiquidationManager(fakeAddress)).to.be.revertedWith(errorMessage);
+      await expect(sp.startCollateralSunset(fakeAddress)).to.be.revertedWith(errorMessage);
     });
   });
 
@@ -253,13 +265,53 @@ describe("StabilityPool", () => {
     it("enableCollateral", async () => {
       await stabilityPool.setFactory(await owner.getAddress());
 
+      await expect(stabilityPool.connect(user1).enableCollateral(erc20Token.address)).to.be.revertedWith("Not factory")
       await stabilityPool.enableCollateral(erc20Token.address);
+      await expect(stabilityPool.enableCollateral(erc20Token.address)).to.be.not.reverted;
 
       expect(await stabilityPool.getCollateralLength()).to.be.equal(1);
       expect(await stabilityPool.indexByCollateral(erc20Token.address)).to.be.equal(1);
+
+      await stabilityPool.startCollateralSunset(erc20Token.address);
+      await expect(stabilityPool.enableCollateral(erc20Token.address)).to.be.revertedWith("Collateral is sunsetting");
+    });
+
+    it("enableCollateral of sunsetted collaterals", async () => {
+      await prepareCollateral(debtToken);
+      await prepareCollateral(erc20Token);
+
+      await stabilityPool.startCollateralSunset(debtToken.address);
+      await stabilityPool.startCollateralSunset(erc20Token.address);
+
+      expect(await stabilityPool.indexByCollateral(debtToken.address)).to.be.equal(ZERO_ADDRESS);
+      expect(await stabilityPool.indexByCollateral(erc20Token.address)).to.be.equal(ZERO_ADDRESS);
+
+      let newCollToken = await ethers.deployContract("MockDebtToken", ["new", "NEW"]) as MockDebtToken;
+      await newCollToken.deployed();
+
+      // not expired
+      const beforeCollLength = await stabilityPool.getCollateralLength();
+      await stabilityPool.enableCollateral(newCollToken.address);
+      const afterCollLength = await stabilityPool.getCollateralLength();
+      expect(afterCollLength.sub(beforeCollLength)).to.be.equal(1);
+      expect(await stabilityPool.indexByCollateral(newCollToken.address)).to.be.equal(3);
+
+      // expired sunsetting
+      let newCollToken2 = await ethers.deployContract("MockDebtToken", ["new2", "NEW2"]) as MockDebtToken;
+      await newCollToken2.deployed();
+
+      await time.increase(SUNSET_DURATION);
+      const tx2 = await stabilityPool.enableCollateral(newCollToken2.address);
+
+      await expect(tx2).to.emit(stabilityPool, "CollateralOverwritten")
+        .withArgs(debtToken.address, newCollToken2.address);
+      expect(await stabilityPool.getCollateralLength()).to.be.equal(3);
+      expect(await stabilityPool.indexByCollateral(newCollToken2.address)).to.be.equal(0 + 1);
     });
 
     it("startCollateralSunset", async () => {
+      await expect(stabilityPool.startCollateralSunset(erc20Token.address)).to.be.revertedWith("Collateral already sunsetting");
+
       await prepareCollateral(debtToken);
       await prepareCollateral(erc20Token);
       expect(await stabilityPool.indexByCollateral(erc20Token.address)).to.be.equal(1 + 1);
@@ -276,6 +328,8 @@ describe("StabilityPool", () => {
     });
 
     it("_overwriteCollateral", async () => {
+      await expect(stabilityPool.overwriteCollateral(debtToken.address, 0)).to.be.revertedWith("Index too large");
+
       // prepare
       const currentEpoch = 1;
       const currentScale = 1;
@@ -291,6 +345,9 @@ describe("StabilityPool", () => {
       await prepareCollateral(debtToken);
       await stabilityPool.setCurrentEpoch(currentEpoch);
       await stabilityPool.setCurrentScale(currentScale);
+
+      await expect(stabilityPool.overwriteCollateral(debtToken.address, 0)).to.be.revertedWith("Collateral must be sunset");
+
       await stabilityPool.startCollateralSunset(debtToken.address);
 
       expect(await stabilityPool.epochToScaleToSums(0, 0, idx)).to.be.not.equal(0);
@@ -312,6 +369,7 @@ describe("StabilityPool", () => {
       expect(await stabilityPool.epochToScaleToSums(0, 1, idx)).to.be.equal(0);
       expect(await stabilityPool.epochToScaleToSums(1, 0, idx)).to.be.equal(0);
       expect(await stabilityPool.epochToScaleToSums(1, 1, idx)).to.be.equal(0);
+
     });
 
     it("_updateSnapshots with newValue = 0", async () => {
@@ -541,6 +599,7 @@ describe("StabilityPool", () => {
 
       await time.increase(DAY);
 
+      await expect(stabilityPool.provideToSP(0)).to.be.revertedWith("StabilityPool: Amount must be non-zero");
       const tx = await stabilityPool.provideToSP(amount);
       await expect(tx).to.emit(stabilityPool, "StabilityPoolDebtBalanceUpdated").withArgs(amount);
       await expect(tx).to.emit(stabilityPool, "UserDepositChanged").withArgs(depositor, amount);
@@ -607,6 +666,10 @@ describe("StabilityPool", () => {
 
       expect(await debtToken.balanceOf(stabilityPool.address)).to.be.equal(amount.add(amount2));
       await expect(tx2).to.emit(stabilityPool, "UserDepositChanged").withArgs(depositor, amount.add(amount2));
+
+      // pause listaCore
+      await listaCore.setPaused(true);
+      await expect(stabilityPool.provideToSP(amount)).to.be.revertedWith("Deposits are paused");
     });
 
     it("_updateG", async () => {
@@ -882,6 +945,8 @@ describe("StabilityPool", () => {
     });
 
     it("vaultClaimReward", async () => {
+      await expect(stabilityPool.connect(user1).vaultClaimReward(await owner.getAddress(), ZERO_ADDRESS)).to.be.reverted;
+
       const amount = ethers.utils.parseEther("12.34");
       const depositor = await owner.getAddress();
       await stabilityPool.provideToSP(amount);
@@ -913,6 +978,9 @@ describe("StabilityPool", () => {
     });
 
     it("offset", async () => {
+      await expect(stabilityPool.connect(user1).offset(erc20Token.address, 1, 0))
+        .to.be.revertedWith("StabilityPool: Caller is not Liquidation Manager");
+
       await prepareCollateral(erc20Token);
       const collToAdd = ethers.utils.parseEther("20");
       const fakeLiquidationManager = await owner.getAddress();
@@ -982,6 +1050,8 @@ describe("StabilityPool", () => {
     });
 
     it("withdrawFromSP", async () => {
+      await expect(stabilityPool.withdrawFromSP(100)).to.be.revertedWith("StabilityPool: User must have a non-zero deposit");
+
       // prepare
       await prepareCollateral(erc20Token);
       const depositor = await owner.getAddress();
@@ -1011,6 +1081,8 @@ describe("StabilityPool", () => {
       expect(await stabilityPool.collateralGainsByDepositor(depositor, 0)).to.be.equal(gain);
       await expect(tx).to.emit(stabilityPool, "StabilityPoolDebtBalanceUpdated").withArgs(amount.sub(debtToWithdraw));
       await expect(tx).to.emit(stabilityPool, "UserDepositChanged").withArgs(depositor, leftDeposit);
+
+      await expect(stabilityPool.call(stabilityPool.address, 10)).to.be.revertedWith("!Deposit and withdraw same block");
     });
   });
 });

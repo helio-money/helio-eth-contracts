@@ -331,4 +331,9 @@ contract InternalStabilityPool is StabilityPool {
         }
         return (hasGains);
     }
+
+    function call(InternalStabilityPool target, uint256 amount) public {
+        target.provideToSP(amount);
+        target.withdrawFromSP(amount);
+    }
 }

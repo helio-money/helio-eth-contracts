@@ -1,26 +1,27 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { BigNumber, Signer } from "ethers";
-import type { ListaCore, MockAggregator, MockInternalPriceFeed, PriceFeed } from "../../../../typechain-types";
-import { ZERO_ADDRESS, abi, encodeCallData } from "../../utils";
+import type { InternalPriceFeed, ListaCore, MockAggregator, MockDebtToken, PriceFeed } from "../../../../typechain-types";
+import { HOUR, ZERO_ADDRESS } from "../../utils";
+import { parseEther } from "ethers/lib/utils";
 
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 describe("PriceFeed", () => {
   const FAKE_GUARDIAN_ADDRESS = "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC";
   const FAKE_TOKEN_ADDRESS = "0xDDdDddDdDdddDDddDDddDDDDdDdDDdDDdDDDDDDd";
+  const RESPONSE_TIMEOUT_BUFFER = HOUR;
 
   let listaCore: ListaCore;
   let priceFeed: PriceFeed;
-  let internalPriceFeed: MockInternalPriceFeed;
+  let internalPriceFeed: InternalPriceFeed;
   let aggregator: MockAggregator;
 
   let owner: Signer;
   let user1: Signer;
-  let user2: Signer;
   let feeReceiver: Signer;
   beforeEach(async () => {
-    [owner, user1, user2, feeReceiver] = await ethers.getSigners();
+    [owner, user1, feeReceiver] = await ethers.getSigners();
 
     aggregator = await ethers.deployContract("MockAggregator") as MockAggregator;
     await aggregator.deployed();
@@ -39,10 +40,10 @@ describe("PriceFeed", () => {
     ]) as PriceFeed;
     await priceFeed.deployed();
 
-    internalPriceFeed = await ethers.deployContract("MockInternalPriceFeed", [
+    internalPriceFeed = await ethers.deployContract("InternalPriceFeed", [
       listaCore.address,
       aggregator.address
-    ]) as MockInternalPriceFeed;
+    ]) as InternalPriceFeed;
     await internalPriceFeed.deployed();
   });
 
@@ -371,7 +372,7 @@ describe("PriceFeed", () => {
         .withArgs(FAKE_TOKEN_ADDRESS, aggregator.address, true);
     });
 
-    it("_processFeedResponses with isValiddResponse = false", async () => {
+    it("_processFeedResponses with invalid response", async () => {
       const heartbeat = 3600;
       const decimals = await aggregator.decimals();
       const lastRoundId = 2;
@@ -385,10 +386,10 @@ describe("PriceFeed", () => {
         isFeedWorking: true,
         isEthIndexed: false
       };
-      const block = await ethers.provider.getBlock("latest");
+
       const priceRecord = {
         scaledPrice: ethers.utils.parseEther("12"),
-        timestamp: block.timestamp,
+        timestamp: await time.latest(),
         lastUpdated: 1701177091,
         roundId: 0
       };
@@ -399,7 +400,7 @@ describe("PriceFeed", () => {
       expect(isPriceStaled).to.be.false;
 
       const oldOracleWorking = await internalPriceFeed.oracleRecords(FAKE_TOKEN_ADDRESS);
-      const tx = await internalPriceFeed.processFeedResponses(
+      await internalPriceFeed.processFeedResponses(
         FAKE_TOKEN_ADDRESS,
         oracleRecord,
         res.currResponse,
@@ -407,10 +408,104 @@ describe("PriceFeed", () => {
         priceRecord
       );
       expect((await internalPriceFeed.oracleRecords(FAKE_TOKEN_ADDRESS)).isFeedWorking).to.be.equal(!oldOracleWorking);
-      await expect(tx).to.emit(internalPriceFeed, "PriceFeedStatusUpdated").withArgs(FAKE_TOKEN_ADDRESS, aggregator.address, false);
+
+      // staled price record
+      const validElapse = oracleRecord.heartbeat + RESPONSE_TIMEOUT_BUFFER;
+      const nextTime = await time.latest() + validElapse + 1;
+      const staledPriceRecord = {
+        scaledPrice: ethers.utils.parseEther("12"),
+        timestamp: await time.latest(),
+        lastUpdated: 1701177091,
+        roundId: 0
+      };
+      await time.increaseTo(nextTime);
+      expect(await internalPriceFeed.isPriceStale(staledPriceRecord.timestamp, oracleRecord.heartbeat)).to.be.true;
+      oracleRecord.isFeedWorking = false;
+      await expect(internalPriceFeed.processFeedResponses(
+        FAKE_TOKEN_ADDRESS,
+        oracleRecord,
+        res.currResponse,
+        res.prevResponse,
+        staledPriceRecord
+      ))
+        .to.be.revertedWithCustomError(internalPriceFeed, "PriceFeed__FeedFrozenError")
+        .withArgs(FAKE_TOKEN_ADDRESS);
     });
 
-    it("fetchPrice", async () => {
+    it("_processFeedResponses with valid response and calc eth price", async () => {
+      const heartbeat = 3600;
+      const decimals = await aggregator.decimals();
+      const lastRoundId = 1;
+      const res = await internalPriceFeed.fetchFeedResponses(aggregator.address, lastRoundId);
+      const oracleRecord = {
+        chainLinkOracle: aggregator.address,
+        decimals,
+        heartbeat,
+        sharePriceSignature: "0x00000000",
+        sharePriceDecimals: 8,
+        isFeedWorking: true,
+        isEthIndexed: true
+      };
+
+      const priceRecord = {
+        scaledPrice: ethers.utils.parseEther("12"),
+        timestamp: await time.latest(),
+        lastUpdated: 1701177091,
+        roundId: 0
+      };
+      const isValidResponse = await internalPriceFeed.isFeedWorking(res.currResponse, res.prevResponse);
+      expect(isValidResponse).to.be.true;
+      const isPriceStaled = await internalPriceFeed.isPriceStale(priceRecord.timestamp, oracleRecord.heartbeat);
+      expect(isPriceStaled).to.be.false;
+
+      const scaledAnswer = await internalPriceFeed.scalePriceByDigits(res.currResponse.answer, oracleRecord.decimals);
+      const scaledEthPrice = await internalPriceFeed.callStatic.calcEthPrice(scaledAnswer);
+      expect(await internalPriceFeed.callStatic.processFeedResponses(FAKE_TOKEN_ADDRESS, oracleRecord, res.currResponse, res.prevResponse, priceRecord))
+        .to.be.equal(scaledEthPrice);
+    });
+
+    it("_processFeedResponses with valid response and call shared price", async () => {
+      const fakeToken = await ethers.deployContract("MockDebtToken", ["", ""]) as MockDebtToken;
+      await fakeToken.deployed();
+
+      const heartbeat = 3600;
+      const decimals = await aggregator.decimals();
+      const lastRoundId = 1;
+      const res = await internalPriceFeed.fetchFeedResponses(aggregator.address, lastRoundId);
+      const oracleRecord = {
+        chainLinkOracle: aggregator.address,
+        decimals,
+        heartbeat,
+        sharePriceSignature: ethers.utils.id("sharePriceCall()").slice(0, 10),
+        sharePriceDecimals: 8,
+        isFeedWorking: true,
+        isEthIndexed: false
+      };
+
+      const priceRecord = {
+        scaledPrice: ethers.utils.parseEther("12"),
+        timestamp: await time.latest(),
+        lastUpdated: 1701177091,
+        roundId: 0
+      };
+      const isValidResponse = await internalPriceFeed.isFeedWorking(res.currResponse, res.prevResponse);
+      expect(isValidResponse).to.be.true;
+      const isPriceStaled = await internalPriceFeed.isPriceStale(priceRecord.timestamp, oracleRecord.heartbeat);
+      expect(isPriceStaled).to.be.false;
+
+      await fakeToken.setShouldRevert(true);
+      await expect(internalPriceFeed.processFeedResponses(fakeToken.address, oracleRecord, res.currResponse, res.prevResponse, priceRecord))
+        .to.be.revertedWith("Share price not available");
+
+      await fakeToken.setShouldRevert(false);
+      const scaledAnswer = await internalPriceFeed.scalePriceByDigits(res.currResponse.answer, oracleRecord.decimals);
+      const sharedPrice = await fakeToken.sharePriceCall();
+      const scaledPrice = scaledAnswer.mul(sharedPrice).div(BigNumber.from(10).pow(oracleRecord.sharePriceDecimals));
+      expect(await internalPriceFeed.callStatic.processFeedResponses(fakeToken.address, oracleRecord, res.currResponse, res.prevResponse, priceRecord))
+        .to.be.equal(scaledPrice);
+    });
+
+    it("fetchPrice with not updated feed", async () => {
       let scaledPrice = ethers.utils.parseEther("2");
       let startTimestamp = await internalPriceFeed.timestamp();
       await internalPriceFeed.storePrice(
@@ -433,11 +528,33 @@ describe("PriceFeed", () => {
       expect(isStaled).to.be.false;
 
       // check returned price
-      const returnedPrice = await ethers.provider.call({
-        to: internalPriceFeed.address,
-        data: encodeCallData("fetchPrice(address)", ["address"], [ZERO_ADDRESS])
-      });
-      expect(returnedPrice).to.be.equal(abi.encode(["uint"], [scaledPrice]))
+      expect(await internalPriceFeed.callStatic.fetchPrice(ZERO_ADDRESS)).to.be.equal(scaledPrice);
+    });
+
+    it("fetchPrice with updated feed", async () => {
+      let startTimestamp = await internalPriceFeed.timestamp();
+      await internalPriceFeed.storePrice(
+        ZERO_ADDRESS,
+        parseEther("2"),
+        startTimestamp,
+        1
+      );
+
+      await time.increaseTo(startTimestamp.add(10).toNumber());
+
+      let priceRecord = await internalPriceFeed.priceRecords(ZERO_ADDRESS);
+      expect(priceRecord.roundId).to.be.equal(1);
+
+      let res = await internalPriceFeed.fetchFeedResponses(aggregator.address, priceRecord.roundId);
+      const isStaled = await internalPriceFeed.isPriceStale(priceRecord.timestamp, 3600);
+      // go to the right branch: !updated == false
+      expect(priceRecord.lastUpdated).to.be.not.equal(await internalPriceFeed.timestamp());
+      expect(res.updated).to.be.true;
+      expect(isStaled).to.be.false;
+
+      // check returned price
+      const scaledPrice = await internalPriceFeed.scalePriceByDigits(res.currResponse.answer, await aggregator.decimals());
+      expect(await internalPriceFeed.callStatic.fetchPrice(ZERO_ADDRESS)).to.be.equal(scaledPrice);
     });
 
     it("_calcEthPrice", async () => {
@@ -445,16 +562,10 @@ describe("PriceFeed", () => {
       const roundId = 2;
       const base = BigNumber.from("10");
 
-      const data = await ethers.provider.call({
-        to: internalPriceFeed.address,
-        data: encodeCallData("calcEthPrice(uint256)", ["uint256"], [amount])
-      });
-      const price = abi.decode(['uint256'], data)[0];
-
       const roundData = await aggregator.getRoundData(roundId);
       const answer = roundData[1];
       const decimals = await aggregator.decimals();
-      expect(price).to.be.equal(answer.mul(amount).div(base.pow(decimals)));
+      expect(await internalPriceFeed.callStatic.calcEthPrice(amount)).to.be.equal(answer.mul(amount).div(base.pow(decimals)));
     });
   });
 
@@ -510,6 +621,17 @@ describe("PriceFeed", () => {
       ))
         .to.revertedWithCustomError(internalPriceFeed, "PriceFeed__FeedFrozenError")
         .withArgs(FAKE_TOKEN_ADDRESS);
+    });
+
+    it("Should return empty response if oracle error", async () => {
+      await aggregator.setShouldRevert(true);
+
+      await expect(aggregator.latestRoundData()).to.be.reverted;
+      const result = await internalPriceFeed.fetchCurrentFeedResponse(aggregator.address);
+      expect(result.roundId).to.be.equal(0);
+      expect(result.answer).to.be.equal(0);
+      expect(result.timestamp).to.be.equal(0);
+      expect(result.success).to.be.false;
     });
 
     it("Should revert if price lastUpdated is 0", async () => {

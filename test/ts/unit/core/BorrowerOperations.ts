@@ -5,6 +5,7 @@ import { InternalBorrowerOperations, MockDebtToken, MockListaCore, MockTroveMana
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { _1E18, ZERO, ZERO_ADDRESS } from "../../utils";
 import { parseEther } from "ethers/lib/utils";
+import { computeCR } from "../../utils/math";
 
 describe("BorrowerOperations", () => {
   const factory = "0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF";
@@ -61,17 +62,6 @@ describe("BorrowerOperations", () => {
     ]) as InternalBorrowerOperations;
     await borrowerOperations.deployed();
   })
-
-  const computeCR = (coll: BigNumber, debt: BigNumber, price: BigNumber | null = null) => {
-    if (price == null) {
-      price = BigNumber.from(1);
-    }
-
-    if (debt.gt(0)) {
-      return coll.mul(price).div(debt);
-    }
-    return BigNumber.from(2).pow(256).sub(1);
-  }
 
   const setEntireSystemBalances = async (coll: BigNumber, debt: BigNumber, price: BigNumber) => {
     await borrowerOperations.setFactory(await owner.getAddress());

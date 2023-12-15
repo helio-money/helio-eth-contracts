@@ -10,9 +10,6 @@ import "../../core/TroveManager.sol";
 contract InternalTroveManager is TroveManager {
     using SafeERC20 for IERC20;
 
-    mapping(address => uint256) public storedPendingReward;
-    uint32[7][65535] private totalMints;
-
     constructor(
         address _listaCore,
         address _gasPoolAddress,
@@ -67,19 +64,23 @@ contract InternalTroveManager is TroveManager {
         defaultedDebt = debt;
     }
 
-    function setStoredPendingReward(address account, uint256 amount) public {
-        storedPendingReward[account] = amount;
-    }
-
     function setTrove(
         address account,
         uint256 coll,
         uint256 debt,
         uint256 stake,
         Status status,
+        uint128 arrayIndex,
         uint256 interestIndex
     ) public {
-        Trove memory t = Trove(debt, coll, stake, status, 0, interestIndex);
+        Trove memory t = Trove(
+            debt,
+            coll,
+            stake,
+            status,
+            arrayIndex,
+            interestIndex
+        );
         Troves[account] = t;
     }
 
@@ -207,6 +208,10 @@ contract InternalTroveManager is TroveManager {
         uint256 _collateral
     ) public {
         super._redeemCloseTrove(_borrower, _debt, _collateral);
+    }
+
+    function innerCloseTrove(address _borrower, Status closedStatus) public {
+        super._closeTrove(_borrower, closedStatus);
     }
 
     function isValidFirstRedemptionHint(
@@ -385,5 +390,25 @@ contract InternalTroveManager is TroveManager {
 
     function requireCallerIsLM() public view {
         super._requireCallerIsLM();
+    }
+
+    function setMaxSystemDebt(uint256 value) public {
+        maxSystemDebt = value;
+    }
+
+    function setMCR(uint256 value) public {
+        MCR = value;
+    }
+
+    function setTotalCollateralSnapshot(uint256 value) public {
+        totalCollateralSnapshot = value;
+    }
+
+    function setTotalStakesSnapshot(uint256 value) public {
+        totalStakesSnapshot = value;
+    }
+
+    function setRewardIntegral(uint256 value) public {
+        rewardIntegral = value;
     }
 }

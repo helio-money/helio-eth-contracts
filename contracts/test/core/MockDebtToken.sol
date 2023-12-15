@@ -115,4 +115,18 @@ contract MockDebtToken is ERC20 {
     function enableTroveManager(address _troveManager) public {
         enabledTroveManagers[_troveManager] = true;
     }
+
+    bool shouldRevert;
+
+    function setShouldRevert(bool value) public {
+        shouldRevert = value;
+    }
+
+    function sharePriceCall() public view returns (uint256) {
+        if (shouldRevert) {
+            require(false, "revert test");
+        }
+
+        return 123 ether;
+    }
 }
