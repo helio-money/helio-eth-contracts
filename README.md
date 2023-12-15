@@ -31,7 +31,7 @@ ALCHEMY_API_KEY="your alchemy api key"
 ETHERSCAN_API_KEY=""
 ```
 
-`DEPLOYER_KEY` is the private key of the account that will deploy the contracts. For unit tests, you can use the private key of the first account in your local Ethereum node such as `c76601189f42a59916a6f4af815582ee0bc174750a9e8a67b5eb69feba6a5fdf`.
+`DEPLOYER_KEY` is the private key of the account that will deploy the contracts. It should have enough ETH to pay for the gas fees.
 
 To get `ALCHEMY_API_KEY`, you need to create an account on [Alchemy](https://www.alchemy.com/). Then, create a new Ethereum app and copy the API key.
 
