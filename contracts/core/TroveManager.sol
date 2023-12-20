@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.19;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -27,7 +28,7 @@ import "../dependencies/ListaOwnable.sol";
             Functionality related to liquidations has been moved to `LiquidationManager`. This was
             necessary to avoid the restriction on deployed bytecode size.
  */
-contract TroveManager is ListaBase, ListaOwnable, SystemStart {
+contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // --- Connected contract declarations ---
@@ -1251,7 +1252,7 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart {
         address _lowerHint,
         address _borrower,
         address _receiver
-    ) external returns (uint256, uint256, uint256) {
+    ) external nonReentrant returns (uint256, uint256, uint256) {
         _requireCallerIsBO();
         if (_isCollIncrease || _isDebtIncrease) {
             require(!paused, "Collateral Paused");

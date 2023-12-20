@@ -77,12 +77,12 @@ export function computeStake(coll: BigNumber, totalCollSnapshot: BigNumber, tota
 }
 
 export async function internalTotalActiveDebt(troveManager: InternalTroveManager) {
-  const data = await ethers.provider.getStorageAt(troveManager.address, 26);
+  const data = await ethers.provider.getStorageAt(troveManager.address, 27);
   return BigNumber.from(abi.decode(["uint256"], data)[0]);
 }
 
 export async function internalTotalActiveCollateral(troveManager: InternalTroveManager) {
-  const data = await ethers.provider.getStorageAt(troveManager.address, 25);
+  const data = await ethers.provider.getStorageAt(troveManager.address, 26);
   return BigNumber.from(abi.decode(["uint256"], data)[0]);
 }
 
@@ -153,7 +153,7 @@ export async function getEntireDebtAndColl(troveManager: InternalTroveManager, b
 }
 
 export async function getStoredPendingReward(troveManager: InternalTroveManager, account: string) {
-  const key = ethers.utils.solidityKeccak256(["uint256", "uint256"], [account, 33])
+  const key = ethers.utils.solidityKeccak256(["uint256", "uint256"], [account, 34])
   const data = await ethers.provider.getStorageAt(troveManager.address, key);
   return abi.decode(["uint256"], data)[0];
 }
