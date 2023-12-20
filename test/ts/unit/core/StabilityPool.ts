@@ -1083,6 +1083,13 @@ describe("StabilityPool", () => {
       await expect(tx).to.emit(stabilityPool, "UserDepositChanged").withArgs(depositor, leftDeposit);
 
       await expect(stabilityPool.call(stabilityPool.address, 10)).to.be.revertedWith("!Deposit and withdraw same block");
+      // change DebtToken address should fail
+      await expect(stabilityPool.setDebtToken(erc20Token.address)).to.be.revertedWith("debt tokens haven't been fully withdrawn");
+    });
+
+    it("setDebtToken", async () => {
+      await expect(stabilityPool.setDebtToken(erc20Token.address)).not.to.be.reverted;
+      expect(await stabilityPool.debtToken()).to.be.equal(erc20Token.address);
     });
   });
 });
