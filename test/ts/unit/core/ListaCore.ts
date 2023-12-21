@@ -158,7 +158,9 @@ describe("ListaCore", () => {
 
     it("Should revert if not new owner", async () => {
       const newOwnerAddress = await user.getAddress();
+      await expect(listaCore.commitTransferOwnership(owner.getAddress())).to.be.revertedWith("address was submitted or is current owner");
       await listaCore.commitTransferOwnership(newOwnerAddress);
+      await expect(listaCore.commitTransferOwnership(newOwnerAddress)).to.be.revertedWith("address was submitted or is current owner");
 
       await expect(listaCore.connect(user2).acceptTransferOwnership()).to.be.revertedWith("Only new owner");
     });
