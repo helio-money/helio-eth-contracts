@@ -497,23 +497,26 @@ describe("BorrowerOperations", () => {
 
     it("_requireValidwBETHAmount", async () => {
       // prepare
-      const rate = BigNumber.from("16000000");
+      const rate = BigNumber.from("1026428870252000000");
       const ethAmount = ONE.mul(3);
       await erc20Token.setExchangeRate(rate);
       const collAmount = await borrowerOperations.getCollateralAmount(ethAmount);
       await erc20Token.setReturnedCollateralAmount(collAmount);
 
-      // 1. == collateralAmount
+      // 1. < collateralAmount
       expect(await erc20Token.balanceOf(borrowerOperations.address)).to.be.gte(0);
-      await borrowerOperations.requireValidwBETHAmount(ethAmount, 0, { value: ethAmount });
-      expect(await erc20Token.balanceOf(referral)).to.be.equal(0);
-
-      // 2. < collateralAmount
-      expect(await erc20Token.balanceOf(borrowerOperations.address)).to.be.lt(1);
-      const tx = await borrowerOperations.requireValidwBETHAmount(ethAmount, 1, { value: ethAmount });
+      const tx = await borrowerOperations.requireValidwBETHAmount(ethAmount, collAmount, { value: ethAmount });
       expect(await erc20Token.balanceOf(borrowerOperations.address)).to.be.equal(collAmount);
       expect(await ethers.provider.getBalance(erc20Token.address)).to.be.equal(ethAmount);
       await expect(tx).to.emit(erc20Token, "DepositEth").withArgs(borrowerOperations.address, ethAmount, collAmount, referral);
+
+      // 2. == collateralAmount
+      expect(await erc20Token.balanceOf(borrowerOperations.address)).to.be.lt(ethAmount);
+      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, 0, { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. BETH/WBETH should be larger than 0.8 while smaller than 1.2");
+      expect(await erc20Token.balanceOf(referral)).to.be.equal(0);
+      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, ethAmount.mul(2), { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. BETH/WBETH should be larger than 0.8 while smaller than 1.2");
+      expect(await erc20Token.balanceOf(referral)).to.be.equal(0);
+
     });
 
     it("_requireUserAcceptsFee", async () => {
@@ -675,10 +678,10 @@ describe("BorrowerOperations", () => {
     });
 
     const initEnv = async () => {
-      const ethAmount = BigNumber.from("37037010");
+      const ethAmount = ONE.mul(3);
       const maxFeePercent = parseEther("0.33");
-      const debtAmount = parseEther("2");
-      const exchangeRate = BigNumber.from("1234567");
+      const debtAmount = parseEther("1");
+      const exchangeRate = BigNumber.from("1026428870252000000"); // 1.026428870252
       const collAmount = await getCollAmount(exchangeRate, ethAmount);
       await erc20Token.setReturnedCollateralAmount(collAmount);
       const feeReceiver = await user2.getAddress();
@@ -687,7 +690,7 @@ describe("BorrowerOperations", () => {
       await troveManager.setMCR(MCR);
       const totalColl = parseEther("100");
       const totalDebt = parseEther("20");
-      const price = parseEther("0.3001");
+      const price = BigNumber.from("2408639490000000000000"); // 2408.63949
       await setEntireSystemBalances(totalColl, totalDebt, price);
       const feeRate = parseEther("0.305");
       const debtFee = debtAmount.mul(feeRate).div(PRECISION);
@@ -768,7 +771,7 @@ describe("BorrowerOperations", () => {
     it("repayDebt", async () => {
       // prepare
       const params = await initEnv();
-      const repayDebt = parseEther("1.1");
+      const repayDebt = parseEther("0.2");
       const isDebtIncrease = false;
 
       // check
@@ -783,7 +786,7 @@ describe("BorrowerOperations", () => {
       const tx = await borrowerOperations.repayDebt(troveManager.address, await owner.getAddress(), repayDebt, ZERO_ADDRESS, ZERO_ADDRESS);
       await expect(tx).to.not.emit(borrowerOperations, "BorrowingFeePaid");
 
-      const repayDebt2 = parseEther("0.5");
+      const repayDebt2 = parseEther("0.1");
       const tx2 = await borrowerOperations.adjustTrove(troveManager.address, await owner.getAddress(), params.maxFeePercent, ZERO, ZERO, repayDebt2, false, ZERO_ADDRESS, ZERO_ADDRESS);
       await expect(tx2).to.not.emit(borrowerOperations, "BorrowingFeePaid");
     });
