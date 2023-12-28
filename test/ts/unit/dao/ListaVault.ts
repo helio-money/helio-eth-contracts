@@ -116,6 +116,10 @@ describe("ListaVault Contract", async () => {
       await expect(tx).not.to.be.reverted;
       await expect(tx).to.emit(listaVault, "NewReceiverRegistered");
     });
+
+    it("Should revert if caller is not owner", async () => {
+      await expect(listaVault.connect(user1).registerNewReceiver()).to.be.revertedWith("Only owner");
+    });
   });
 
   describe("setInitialParameters(IEmissionSchedule, IBoostCalculator, uint256, uint64, uint128[], InitialAllowance[])", async () => {

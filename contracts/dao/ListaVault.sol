@@ -134,7 +134,7 @@ contract ListaVault is ListaOwnable, SystemStart {
         stabilityPool = _stabilityPool;
     }
 
-    function registerNewReceiver() external {
+    function registerNewReceiver() external onlyOwner {
         // ensure the stability pool is registered with receiver ID 0
         voter.registerNewReceiver();
         idToReceiver[0] = Receiver({account: stabilityPool, isActive: true});
