@@ -124,6 +124,7 @@ contract ListaCore {
     }
 
     function commitTransferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != pendingOwner && newOwner != owner, "address was submitted or is current owner");
         pendingOwner = newOwner;
         ownershipTransferDeadline = block.timestamp + OWNERSHIP_TRANSFER_DELAY;
 

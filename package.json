@@ -16,6 +16,7 @@
     "typechain": "hardhat typechain",
     "test:js": "hardhat test test/js/*",
     "test:ts": "hardhat test test/ts/unit/*",
+    "test:all": "hardhat test",
     "test": "yarn test:ts && yarn test:js",
     "coverage": "hardhat coverage",
     "coveralls": "cat coverage/lcov.info | coveralls",
@@ -26,8 +27,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@openzeppelin/contracts": "4.8.0",
-    "@layerzerolabs/solidity-examples": "git+https://github.com/LayerZero-Labs/solidity-examples.git#3d3a09f14a1d05479a5a397d5f646fe3a455c00c"
+    "@layerzerolabs/solidity-examples": "git+https://github.com/LayerZero-Labs/solidity-examples.git#3d3a09f14a1d05479a5a397d5f646fe3a455c00c",
+    "@openzeppelin/contracts": "4.8.0"
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.3.4",
@@ -61,11 +62,12 @@
     "eslint-config-prettier": "^8.5.0",
     "eth-gas-reporter": "^0.2.22",
     "eth-mutants": "^0.1.1",
-    "ethereumjs-util": "^7.0.9",
+    "ethereumjs-util": "^7.1.5",
     "ethers": "^5.6.9",
     "hardhat": "^2.16.1",
     "hardhat-deploy": "0.11.11",
     "hardhat-gas-reporter": "^1.0.8",
+    "merkletreejs": "^0.3.11",
     "mocha": "^10.0.0",
     "npm-run-all": "^4.1.5",
     "papaparse": "^5.4.1",
@@ -74,7 +76,7 @@
     "solc": "^0.6.11",
     "solhint": "^3.4.0",
     "solhint-plugin-prettier": "^0.0.5",
-    "solidity-coverage": "^0.7.21",
+    "solidity-coverage": "^0.8.0",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.0",
     "typescript": "^4.7.4",

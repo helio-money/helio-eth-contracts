@@ -163,6 +163,7 @@ contract StabilityPool is ListaOwnable, SystemStart {
     }
 
     function setDebtToken(IDebtToken _debtTokenAddress) public onlyOwner {
+	require(totalDebtTokenDeposits == 0, "debt tokens haven't been fully withdrawn");
         debtToken = _debtTokenAddress;
     }
 
