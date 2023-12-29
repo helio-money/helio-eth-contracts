@@ -19,6 +19,7 @@
     "test:all": "hardhat test",
     "test": "yarn test:ts && yarn test:js",
     "coverage": "hardhat coverage",
+    "contract-size": "hardhat size-contracts",
     "coveralls": "cat coverage/lcov.info | coveralls",
     "addresses": "hardhat run scripts/print-addresses.ts",
     "init-contract": "hardhat run scripts/init.ts"
@@ -65,6 +66,7 @@
     "ethereumjs-util": "^7.1.5",
     "ethers": "^5.6.9",
     "hardhat": "^2.16.1",
+    "hardhat-contract-sizer": "^2.10.0",
     "hardhat-deploy": "0.11.11",
     "hardhat-gas-reporter": "^1.0.8",
     "merkletreejs": "^0.3.11",
