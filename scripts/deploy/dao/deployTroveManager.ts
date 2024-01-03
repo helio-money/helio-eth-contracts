@@ -1,46 +1,49 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
-import { Contract } from "ethers";
+import { Contract, Signer } from "ethers";
 import hre, { ethers } from "hardhat";
+import { Sign } from "crypto";
+import { sepolia_addresses } from "../../../constants/deployed_addresses";
 
 const params = DEPLOYMENT_PARAMS[11155111];
+//const addresses = sepolia_addresses;
 
 export const deployTroveManager = async (
   listaCore: Contract,
   debtToken: Contract,
   borrowOperations: Contract,
-  vault: Contract,
-  liquidationManager: Contract
+  liquidationManager: Contract,
 ) => {
   console.log("Deploying TroveManager...");
   const troveManager = await ethers.deployContract("TroveManager", [
-    listaCore.address,
+    '0xF9a3702659d8bFDb2ff5E3c3f264E479801F63Bf', // listaCore.address,
     params.gasPool,
-    debtToken.address,
-    borrowOperations.address,
-    vault.address,
-    liquidationManager.address,
-    params.gasCompensation,
+    '0x15493D9141481505f7CA3e591Cea2cBB03637B1d', // debtToken.address,
+    '0xC66772EdB0fF156b3F99E21697e5D6b1a74Dd315', // borrowOperations.address,
+    params.vault,
+    '0xcf240AaD203A342e0caD90343D2A7A43C851E516', // liquidationManager.address,
+    params.gasCompensation
   ]);
   await troveManager.deployed();
   console.log("TroveManager deployed to:", troveManager.address);
 
-  while (true) {
+  const v = true;
+  while (v) {
     try {
       await hre.run("verify:verify", {
         address: troveManager.address,
         constructorArguments: [
-          listaCore.address,
+          '0xF9a3702659d8bFDb2ff5E3c3f264E479801F63Bf', // listaCore.address,
           params.gasPool,
-          debtToken.address,
-          borrowOperations.address,
-          vault.address,
-          liquidationManager.address,
-          params.gasCompensation,
+          '0x15493D9141481505f7CA3e591Cea2cBB03637B1d', // debtToken.address,
+          '0xC66772EdB0fF156b3F99E21697e5D6b1a74Dd315', // borrowOperations.address,
+          params.vault,
+          '0xcf240AaD203A342e0caD90343D2A7A43C851E516', // liquidationManager.address,
+          params.gasCompensation
         ],
       });
       break;
     } catch (e) {
-      console.log("retrying...");
+      console.log("retrying...", e);
     }
   }
 
