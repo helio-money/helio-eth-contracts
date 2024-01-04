@@ -18,8 +18,7 @@ export const deployLiquidationManager = async (
   ]);
   await liquidationManager.deployed();
   console.log(
-    "LiquidationManager deployed to:",
-    await liquidationManager.address
+    "LiquidationManager deployed to:", liquidationManager.address
   );
 
   console.log("Updating liquidationManager in StabilityPool...");
@@ -43,7 +42,7 @@ export const deployLiquidationManager = async (
       });
       break;
     } catch (e) {
-      console.log("retrying...");
+      console.log("retrying...", e);
     }
   }
 

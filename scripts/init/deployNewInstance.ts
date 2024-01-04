@@ -7,7 +7,7 @@ export const deployNewInstance = async () => {
   const factory = await ethers.getContractAt("Factory", addresses.Factory);
   await factory.deployNewInstance(
     addresses.TestToken,
-    ethers.constants.AddressZero,
+    addresses.PriceFeed,
     addresses.TroveManager,
     addresses.SortedTroves,
     {
@@ -18,7 +18,7 @@ export const deployNewInstance = async () => {
       maxBorrowingFee: 0,
       interestRateInBps: 0,
       maxDebt: "11000000000000000000000",
-      MCR: "1200000000000000000",
+      MCR: "1100000000000000000",
     }
   );
 };

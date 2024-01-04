@@ -1,5 +1,6 @@
-import { Contract } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import hre, { ethers } from "hardhat";
+import { ZERO_ADDRESS } from "../../../test/ts/utils";
 
 export const deployFactory = async (
   listaCore: Contract,
@@ -9,15 +10,15 @@ export const deployFactory = async (
   console.log("Deploying Factory...");
   const factory = await ethers.deployContract("Factory", [
     listaCore.address,
-    ethers.constants.AddressZero,
-    stabilityPool.address,
-    borrowerOperations.address,
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
+    ZERO_ADDRESS, // debtToken
+    stabilityPool.address, // stabilityPool
+    borrowerOperations.address, // borrowerOperations
+    ethers.constants.AddressZero, // sortedTroves
+    ethers.constants.AddressZero, // troveManager
+    ethers.constants.AddressZero, // liquidationManager
   ]);
   await factory.deployed();
-  console.log("Factory deployed to:", await factory.address);
+  console.log("Factory deployed to:", factory.address);
 
   console.log("Updating factory in StabilityPool...");
   await stabilityPool.setFactory(factory.address);
@@ -33,19 +34,37 @@ export const deployFactory = async (
         address: factory.address,
         constructorArguments: [
           listaCore.address,
-          ethers.constants.AddressZero,
-          stabilityPool.address,
-          borrowerOperations.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          ZERO_ADDRESS, // debtToken
+          stabilityPool.address, // stabilityPool
+          borrowerOperations.address, // borrowerOperations
+          ethers.constants.AddressZero, // sortedTroves
+          ethers.constants.AddressZero, // troveManager
+          ethers.constants.AddressZero, // liquidationManager
         ],
       });
       break;
     } catch (e) {
-      console.log("retrying...");
+      console.log("retrying...", e);
     }
   }
 
   return factory;
 };
+
+export const deployNewInstance = async (factory: Contract, priceFeed: Contract, troveManager: Contract, sortedTroves: Contract) => {
+  const tx = await factory.deployNewInstance(
+    priceFeed.address,
+    troveManager.address,
+    sortedTroves.address,
+    {
+      minuteDecayFactor: BigNumber.from('999037758833783000'), // minuteDecayFactor
+      redemptionFeeFloor: 0, // redemptionFeeFloor
+      maxRedemptionFee: 0, // redemptionFeeCeil
+      borrowingFeeFloor: BigNumber.from('5000000000000000'), // borrowFeeFloor
+      maxBorrowingFee: BigNumber.from('50000000000000000'), // borrowFeeCeil
+      interestRateInBps: 0, // interestRateInBps
+      maxDebt: BigNumber.from('200000000000000000000000000'), // maxDebt
+      MCR: BigNumber.from('1100000000000000000') // MCR
+    }
+  );
+}

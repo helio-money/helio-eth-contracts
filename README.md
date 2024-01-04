@@ -57,3 +57,8 @@ yarn coverage
 ```
 
 Open coverage report in browser: `coverage/index.html`
+
+## How to deploy on Sepolia
+
+1. Add `SEPOLIA_DEPLOYER_KEY` to `.env` file and make sure other environment variables are valid
+2. Run `npx hardhat run scripts/deploy.ts --network sepolia`, which will deploy and verify Lista contracts on Sepolia

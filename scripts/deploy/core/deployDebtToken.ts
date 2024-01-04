@@ -23,7 +23,7 @@ export const deployDebtToken = async (
     params.gasCompensation,
   ]);
   await debtToken.deployed();
-  console.log("DebtToken deployed to:", await debtToken.address);
+  console.log("DebtToken deployed to:", debtToken.address);
 
   console.log("Updating debtToken in StabilityPool...");
   await stabilityPool.setDebtToken(debtToken.address);
@@ -55,7 +55,7 @@ export const deployDebtToken = async (
       });
       break;
     } catch (e) {
-      console.log("retrying...");
+      console.log("retrying...", e);
     }
   }
 
