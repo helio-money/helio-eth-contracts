@@ -17,6 +17,6 @@ export const deploySortedTroves = async () => {
       console.log("retrying...", e);
     }
   }
-  // need to setTroveManagerAddress
+
   return sortedTroves;
 };

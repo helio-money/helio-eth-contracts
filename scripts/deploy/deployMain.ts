@@ -6,15 +6,15 @@ import { deployLiquidationManager } from "./core/deployLiquidationManager";
 import { deployListaCore } from "./core/deployListaCore";
 import { deployPriceFeed } from "./core/deployPriceFeed";
 import { deployStabilityPool } from "./core/deployStabilityPool";
+import { deploySortedTroves } from "./core/deploySortedTroves";
+import { deployTroveManager } from "./core/deployTroveManager";
 import { deployMultiTroveGetter } from './core/helpers/deployMultiTroveGetter';
 import { deployTroveManagerGetters } from "./core/helpers/deployTroveManagerGetters";
 import { deployMultiCollateralHintHelpers } from "./core/helpers/deployMultiCollateralHintHelpers";
 import { deployIncentiveVoting } from "./dao/deployIncentiveVoting";
 import { deployInterimAdmin } from "./dao/deployInterimAdmin";
 import { deployListaToken } from "./dao/deployListaToken";
-import { deploySortedTroves } from "./dao/deploySortedTroves";
 import { deployTokenLocker } from "./dao/deployTokenLocker";
-import { deployTroveManager } from "./dao/deployTroveManager";
 import { deployVault } from "./dao/deployVault";
 import { deployCollateralToken } from "./test/deployCollateralToken";
 import { Contract, Signer } from "ethers";
@@ -53,7 +53,6 @@ export const deployMain = async () => {
     borrowerOperations,
     factory
   );
-
   const troveManager = await deployTroveManager(
     listaCore,
     debtToken,
