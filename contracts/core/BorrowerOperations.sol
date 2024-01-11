@@ -779,8 +779,9 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         uint256 ethAmount,
         uint256 collateralAmount
     ) internal {
-	uint256 abs = ListaMath._getAbsoluteDifference(ethAmount, collateralAmount);
-	require(ListaMath.DECIMAL_PRECISION * abs / ethAmount <= 2e17, "Invalid exchange rate. BETH/WBETH should be larger than 0.8 while smaller than 1.2");
+        require(ethAmount >= collateralAmount, "Invalid exchange rate. WBETH/BETH should be larger than 1");
+        uint256 diff = ethAmount - collateralAmount;
+        require(ListaMath.DECIMAL_PRECISION * diff / ethAmount <= 2e17 , "Invalid exchange rate. WBETH/BETH should be smaller than 1.2");
 
         // Convert ETH into WBETH
         if (wBETH.balanceOf(address(this)) < collateralAmount) {

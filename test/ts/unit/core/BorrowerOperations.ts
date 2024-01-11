@@ -515,9 +515,9 @@ describe("BorrowerOperations", () => {
 
       // 2. == collateralAmount
       expect(await erc20Token.balanceOf(borrowerOperations.address)).to.be.lt(ethAmount);
-      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, 0, { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. BETH/WBETH should be larger than 0.8 while smaller than 1.2");
+      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, 0, { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. WBETH/BETH should be smaller than 1.2");
       expect(await erc20Token.balanceOf(referral)).to.be.equal(0);
-      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, ethAmount.mul(2), { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. BETH/WBETH should be larger than 0.8 while smaller than 1.2");
+      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, ethAmount.mul(2), { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. WBETH/BETH should be larger than 1");
       expect(await erc20Token.balanceOf(referral)).to.be.equal(0);
 
     });
