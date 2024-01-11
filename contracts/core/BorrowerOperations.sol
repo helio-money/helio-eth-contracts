@@ -66,13 +66,13 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
     struct LocalVariables_openTrove {
         uint256 price;
         uint256 totalPricedCollateral;
-        uint256 totalDebt;
-        uint256 netDebt;
-        uint256 compositeDebt;
+        uint256 totalDebt; // total debt in the system(all collaterals)
+        uint256 netDebt; // = _debtAmount + minting fee
+        uint256 compositeDebt; // net debt + gas compensation
         uint256 ICR;
         uint256 NICR;
         uint256 stake;
-        uint256 arrayIndex;
+        uint256 arrayIndex; // the index of borrower's address in `TroveOwners`
     }
 
     enum BorrowerOperation {
@@ -81,7 +81,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         adjustTrove
     }
 
-    event Rebalanced(uint256 ethAmount, uint256 wBETHAmount);
+    event RebalancedWBETH(uint256 ethAmount, uint256 wBETHAmount);
 
     event BorrowingFeePaid(
         address indexed borrower,
@@ -132,12 +132,15 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         minNetDebt = _minNetDebt;
     }
 
-    // Convert ETH into wBETH daily
-    function rebalance(uint256 amount) external onlyOwner {
+    /**
+        @dev Convert ETH into wBETH daily.
+        @param amount Amount of ETH to be converted into wBETH
+     */
+    function rebalanceWBETH(uint256 amount) external onlyOwner {
         require(address(this).balance >= amount, "Not enough ETH");
         wBETH.deposit{value: amount}(referral);
 
-        emit Rebalanced(amount, _getCollateralAmount(amount));
+        emit RebalancedWBETH(amount, _getCollateralAmount(amount));
     }
 
     function configureCollateral(
@@ -145,10 +148,6 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         IERC20 collateralToken
     ) external {
         require(msg.sender == factory, "!factory");
-        require(
-            address(collateralToken) == address(wBETH),
-            "Not wBETH collteral"
-        ); // Only add wBETH as collateral
         troveManagersData[troveManager] = TroveManagerData(
             collateralToken,
             uint16(_troveManagers.length)
@@ -218,6 +217,9 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         return TCR < CCR;
     }
 
+    /**
+        @notice Get the composite debt, i.e. the requested Debt amount + Debt borrowing fee + Debt gas comp.
+    */
     function getCompositeDebt(uint256 _debt) external view returns (uint256) {
         return _getCompositeDebt(_debt);
     }
@@ -227,16 +229,23 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
     function openTrove(
         ITroveManager troveManager,
         address account,
+        uint256 _collateralAmount,
         uint256 _maxFeePercentage,
         uint256 _debtAmount,
         address _upperHint,
         address _lowerHint
     ) external payable callerOrDelegated(account) {
         require(!LISTA_CORE.paused(), "Deposits are paused");
-        require(msg.value > 0, "Should send ETH collateral");
-        // Convert ETH into WBETH
-        uint256 _collateralAmount = _getCollateralAmount(msg.value);
-        _requireValidwBETHAmount(msg.value, _collateralAmount);
+        require(
+            (msg.value > 0 && _collateralAmount == 0) || (msg.value == 0 && _collateralAmount > 0),
+            "Should deposit either ETH or other collaterals"
+        );
+
+        if (msg.value > 0) {
+            // Convert ETH into WBETH
+            _collateralAmount = _getCollateralAmount(msg.value);
+            _requireValidwBETHAmount(msg.value, _collateralAmount);
+        }
 
         IERC20 collateralToken;
         LocalVariables_openTrove memory vars;
@@ -286,10 +295,10 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
                 vars.totalPricedCollateral,
                 vars.totalDebt,
                 _collateralAmount * vars.price,
-                true,
+                true, // coll increase
                 vars.compositeDebt,
-                true
-            ); // bools: coll increase, debt increase
+                true // debt increase
+            );
             _requireNewTCRisAboveCCR(newTCR);
         }
 
@@ -304,7 +313,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
             isRecoveryMode
         );
 
-        // Move the collateral to the Trove Manager - collateral will be wBETH
+        // Move the collateral to the Trove Manager - collateral will be wBETH if msg.value > 0
         collateralToken.safeTransfer(address(troveManager), _collateralAmount);
 
         //  and mint the DebtAmount to the caller and gas compensation for Gas Pool
@@ -315,14 +324,21 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
     function addColl(
         ITroveManager troveManager,
         address account,
+        uint256 _collateralAmount,
         address _upperHint,
         address _lowerHint
     ) external payable callerOrDelegated(account) {
         require(!LISTA_CORE.paused(), "Trove adjustments are paused");
-        require(msg.value > 0, "Should send ETH collateral");
-        // Convert ETH into WBETH
-        uint256 _collateralAmount = _getCollateralAmount(msg.value);
-        _requireValidwBETHAmount(msg.value, _collateralAmount);
+        require(
+            (msg.value > 0 && _collateralAmount == 0) || (msg.value == 0 && _collateralAmount > 0),
+            "Should deposit either ETH or other collaterals"
+        );
+
+        if (msg.value > 0) {
+            // Convert ETH into WBETH
+            _collateralAmount = _getCollateralAmount(msg.value);
+            _requireValidwBETHAmount(msg.value, _collateralAmount);
+        }
 
         _adjustTrove(
             troveManager,
@@ -412,7 +428,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         bool _isDebtIncrease,
         address _upperHint,
         address _lowerHint
-    ) external callerOrDelegated(account) {
+    ) external payable callerOrDelegated(account) {
         require(
             (_collDeposit == 0 && !_isDebtIncrease) || !LISTA_CORE.paused(),
             "Trove adjustments are paused"
@@ -421,6 +437,16 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
             _collDeposit == 0 || _collWithdrawal == 0,
             "BorrowerOperations: Cannot withdraw and add coll"
         );
+        require(
+            (msg.value > 0 && _collDeposit == 0) || msg.value == 0,
+            "Should not deposit ETH and other collaterals at the same time"
+        );
+        if (msg.value > 0) {
+            // Convert ETH into WBETH
+            _collDeposit = _getCollateralAmount(msg.value);
+            _requireValidwBETHAmount(msg.value, _collDeposit);
+        }
+
         _adjustTrove(
             troveManager,
             account,

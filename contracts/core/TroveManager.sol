@@ -418,12 +418,16 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
         if (address(_priceFeed) == address(0)) {
             _priceFeed = IPriceFeed(LISTA_CORE.priceFeed());
         }
-        // Instead of fetch collateralToken price(as wBETH is not supported yet), need to calculate ETH price
-        // and then multiply by exchange rate
-        return
-            IBorrowerOperations(borrowerOperationsAddress).getETHAmount(
-                _priceFeed.fetchPrice(address(0))
-            );
+        if (isCollateralwBETH()) {
+            // Instead of fetch collateralToken price(as wBETH is not supported yet), need to calculate ETH price
+            // and then multiply by exchange rate
+            return
+                IBorrowerOperations(borrowerOperationsAddress).getETHAmount(
+                    _priceFeed.fetchPrice(address(0))
+                );
+        } else {
+            return _priceFeed.fetchPrice(address(collateralToken));
+        }
     }
 
     function getWeekAndDay() public view returns (uint256, uint256) {
@@ -608,6 +612,11 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
         }
 
         return (rewardSnapshots[_borrower].collateral < L_collateral);
+    }
+
+    // Return true if the collateral token is wBETH
+    function isCollateralwBETH() public view returns (bool) {
+        return IBorrowerOperations(borrowerOperationsAddress).wBETH() == address(collateralToken);
     }
 
     // --- Redemption fee functions ---
@@ -1284,7 +1293,12 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
                 // trust that BorrowerOperations sent the collateral
             } else {
                 newColl = newColl - _collChange;
-                _sendCollateralInETH(_receiver, _collChange);
+                if (isCollateralwBETH()) {
+                    // withdraw ETH
+                    _sendCollateralInETH(_receiver, _collChange);
+                } else {
+                    _sendCollateral(_receiver, _collChange);
+                }
             }
             t.coll = newColl;
         }
@@ -1317,7 +1331,11 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
         _removeStake(_borrower);
         _closeTrove(_borrower, Status.closedByOwner);
         totalActiveDebt = totalActiveDebt - debtAmount;
-        _sendCollateralInETH(_receiver, collAmount);
+        if (isCollateralwBETH()) {
+            _sendCollateralInETH(_receiver, collAmount);
+        } else {
+            _sendCollateral(_receiver, collAmount);
+        }
         _resetState();
         emit TroveUpdated(_borrower, 0, 0, 0, TroveManagerOperation.close);
     }
