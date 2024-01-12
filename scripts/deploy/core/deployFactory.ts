@@ -1,6 +1,7 @@
 import { BigNumber, Contract } from "ethers";
 import hre, { ethers } from "hardhat";
 import { ZERO_ADDRESS } from "../../../test/ts/utils";
+import { DEPLOYMENT_PARAMS } from "../../../constants/index"
 
 export const deployFactory = async (
   listaCore: Contract,
@@ -52,7 +53,10 @@ export const deployFactory = async (
 };
 
 export const deployNewInstance = async (factory: Contract, priceFeed: Contract, troveManager: Contract, sortedTroves: Contract) => {
+  const wBETH = DEPLOYMENT_PARAMS[11155111].wBETH;
+
   const tx = await factory.deployNewInstance(
+    wBETH,
     priceFeed.address,
     troveManager.address,
     sortedTroves.address,
@@ -67,4 +71,6 @@ export const deployNewInstance = async (factory: Contract, priceFeed: Contract, 
       MCR: BigNumber.from('1100000000000000000') // MCR
     }
   );
+
+  console.log("Deployed new instance...", tx.hash);
 }
