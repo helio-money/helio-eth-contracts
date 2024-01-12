@@ -59,8 +59,8 @@ interface IBorrowerOperations {
     function openTrove(
         address troveManager,
         address account,
-        uint256 _maxFeePercentage,
         uint256 _collateralAmount,
+        uint256 _maxFeePercentage,
         uint256 _debtAmount,
         address _upperHint,
         address _lowerHint
@@ -112,6 +112,8 @@ interface IBorrowerOperations {
     function _100pct() external view returns (uint256);
 
     function debtToken() external view returns (address);
+
+    function wBETH() external view returns (address);
 
     function factory() external view returns (address);
 

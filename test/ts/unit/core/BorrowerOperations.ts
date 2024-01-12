@@ -138,15 +138,18 @@ describe("BorrowerOperations", () => {
       await expect(borrowerOperations.configureCollateral(troveManager.address, erc20Token.address)).to.be.revertedWith("!factory");
 
       await borrowerOperations.setFactory(await owner.getAddress());
-      await expect(borrowerOperations.configureCollateral(troveManager.address, debtToken.address)).to.be.revertedWith("Not wBETH collteral");
+      await expect(borrowerOperations.configureCollateral(troveManager.address, debtToken.address)).not.to.be.reverted;
+      const data_ = await borrowerOperations.troveManagersData(troveManager.address);
+      expect(data_.collateralToken).to.be.equal(debtToken.address);
+      expect(data_.index).to.be.equal(0);
 
       const tx = await borrowerOperations.configureCollateral(troveManager.address, wBETH);
 
-      expect(await borrowerOperations.getTroveManagersLength()).to.be.equal(1);
+      expect(await borrowerOperations.getTroveManagersLength()).to.be.equal(2);
       await expect(tx).to.emit(borrowerOperations, "CollateralConfigured").withArgs(troveManager.address, wBETH);
       const data = await borrowerOperations.troveManagersData(troveManager.address);
       expect(data.collateralToken).to.be.equal(wBETH);
-      expect(data.index).to.be.equal(0);
+      expect(data.index).to.be.equal(1);
     });
 
     it("removeTroveManager", async () => {
@@ -512,9 +515,9 @@ describe("BorrowerOperations", () => {
 
       // 2. == collateralAmount
       expect(await erc20Token.balanceOf(borrowerOperations.address)).to.be.lt(ethAmount);
-      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, 0, { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. BETH/WBETH should be larger than 0.8 while smaller than 1.2");
+      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, 0, { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. WBETH/BETH should be smaller than 1.2");
       expect(await erc20Token.balanceOf(referral)).to.be.equal(0);
-      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, ethAmount.mul(2), { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. BETH/WBETH should be larger than 0.8 while smaller than 1.2");
+      await expect(borrowerOperations.requireValidwBETHAmount(ethAmount, ethAmount.mul(2), { value: ethAmount })).to.be.revertedWith("Invalid exchange rate. WBETH/BETH should be larger than 1");
       expect(await erc20Token.balanceOf(referral)).to.be.equal(0);
 
     });
@@ -571,7 +574,7 @@ describe("BorrowerOperations", () => {
       expect(afterBalance.sub(beforeBalance)).to.be.equal(ethAmount);
     });
 
-    it("rebalance", async () => {
+    it("rebalanceWBETH", async () => {
       const ethAmount = ONE.mul(3);
       await borrowerOperations.transferETH({ value: ethAmount.mul(2) });
       const rate = BigNumber.from("1234567");
@@ -580,11 +583,11 @@ describe("BorrowerOperations", () => {
 
       expect(await ethers.provider.getBalance(borrowerOperations.address)).to.be.gte(ethAmount);
       const beforeBalance = await ethers.provider.getBalance(borrowerOperations.address);
-      const tx = await borrowerOperations.rebalance(ethAmount);
+      const tx = await borrowerOperations.rebalanceWBETH(ethAmount);
       const afterBalance = await ethers.provider.getBalance(borrowerOperations.address);
 
       expect(beforeBalance.sub(afterBalance)).to.be.equal(ethAmount);
-      await expect(tx).to.emit(borrowerOperations, "Rebalanced").withArgs(ethAmount, collAmount);
+      await expect(tx).to.emit(borrowerOperations, "RebalancedWBETH").withArgs(ethAmount, collAmount);
     });
 
     const getCollAmount = async (rate: BigNumber, ethAmount: BigNumber): Promise<BigNumber> => {
@@ -595,12 +598,12 @@ describe("BorrowerOperations", () => {
     it("openTrove and closeTrove", async () => {
       // require
       await listaCore.setPaused(true);
-      await expect(borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), 0, 0, ZERO_ADDRESS, ZERO_ADDRESS))
+      await expect(borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), 0, 0, 0, ZERO_ADDRESS, ZERO_ADDRESS))
         .to.be.revertedWith("Deposits are paused");
       await listaCore.setPaused(false);
-      await expect(borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), 0, 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
-        .to.be.revertedWith("Should send ETH collateral");
-      await expect(borrowerOperations.openTrove(troveManager.address, await user1.getAddress(), 0, 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
+      await expect(borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), 0, 0, 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
+        .to.be.revertedWith("Should deposit either ETH or other collaterals");
+      await expect(borrowerOperations.openTrove(troveManager.address, await user1.getAddress(), 0, 0, 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
         .to.be.revertedWith("Delegate not approved");
 
       // prepare
@@ -623,6 +626,7 @@ describe("BorrowerOperations", () => {
       const tx = await borrowerOperations.openTrove(
         troveManager.address,
         owner.getAddress(),
+        0,
         params.maxFeePercent,
         params.debtAmount,
         ZERO_ADDRESS,
@@ -654,17 +658,17 @@ describe("BorrowerOperations", () => {
     it("addColl", async () => {
       // require
       await listaCore.setPaused(true);
-      await expect(borrowerOperations.addColl(troveManager.address, await owner.getAddress(), ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
+      await expect(borrowerOperations.addColl(troveManager.address, await owner.getAddress(), 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
         .to.be.revertedWith("Trove adjustments are paused");
       await listaCore.setPaused(false);
-      await expect(borrowerOperations.addColl(troveManager.address, await owner.getAddress(), ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
-        .to.be.revertedWith("Should send ETH collateral");
-      await expect(borrowerOperations.addColl(troveManager.address, await user1.getAddress(), ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
+      await expect(borrowerOperations.addColl(troveManager.address, await owner.getAddress(), 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
+        .to.be.revertedWith("Should deposit either ETH or other collaterals");
+      await expect(borrowerOperations.addColl(troveManager.address, await user1.getAddress(), 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: 0 }))
         .to.be.revertedWith("Delegate not approved");
 
       const params = await initEnv();
 
-      await borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), params.maxFeePercent, params.debtAmount, ZERO_ADDRESS, ZERO_ADDRESS, { value: params.ethAmount });
+      await borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), 0, params.maxFeePercent, params.debtAmount, ZERO_ADDRESS, ZERO_ADDRESS, { value: params.ethAmount });
       const increaseAmount = parseEther("0.001");
       const collIncrease = await getCollAmount(params.exchangeRate, increaseAmount);
       await erc20Token.setReturnedCollateralAmount(collIncrease);
@@ -674,7 +678,7 @@ describe("BorrowerOperations", () => {
         params.totalColl.mul(params.price), params.totalDebt, params.recoveryMode, ZERO, true, false,
         params.newColl, params.newDebt, params.price, collIncrease, ZERO, params.MCR
       )).to.be.true;
-      await borrowerOperations.addColl(troveManager.address, await owner.getAddress(), ZERO_ADDRESS, ZERO_ADDRESS, { value: increaseAmount });
+      await borrowerOperations.addColl(troveManager.address, await owner.getAddress(), 0, ZERO_ADDRESS, ZERO_ADDRESS, { value: increaseAmount });
     });
 
     const initEnv = async () => {
@@ -732,7 +736,7 @@ describe("BorrowerOperations", () => {
     it("withdrawColl", async () => {
       const params = await initEnv();
       expect(params.recoveryMode).to.be.false;
-      await borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), params.maxFeePercent, params.debtAmount, ZERO_ADDRESS, ZERO_ADDRESS, { value: params.ethAmount });
+      await borrowerOperations.openTrove(troveManager.address, await owner.getAddress(), 0, params.maxFeePercent, params.debtAmount, ZERO_ADDRESS, ZERO_ADDRESS, { value: params.ethAmount });
       await expect(borrowerOperations.withdrawColl(troveManager.address, await user1.getAddress(), 0, ZERO_ADDRESS, ZERO_ADDRESS))
         .to.be.revertedWith("Delegate not approved");
 
@@ -801,18 +805,18 @@ describe("BorrowerOperations", () => {
       await expect(operations.setReferral(versatileAddr)).to.be.revertedWith("Only owner");
       await expect(operations.setDebtToken(versatileAddr)).to.be.revertedWith("Only owner");
       await expect(operations.setMinNetDebt(versatileAddr)).to.be.revertedWith("Only owner");
-      await expect(operations.rebalance(versatileAddr)).to.be.revertedWith("Only owner");
+      await expect(operations.rebalanceWBETH(versatileAddr)).to.be.revertedWith("Only owner");
     });
 
     it("require", async () => {
       await erc20Token.setExchangeRate(parseEther("0.34"));
 
       await expect(borrowerOperations.setMinNetDebt(0)).to.be.reverted;
-      await expect(borrowerOperations.rebalance(0)).to.emit(borrowerOperations, "Rebalanced").withArgs(0, 0);
+      await expect(borrowerOperations.rebalanceWBETH(0)).to.emit(borrowerOperations, "RebalancedWBETH").withArgs(0, 0);
 
       await borrowerOperations.transferETH({ value: parseEther("1") });
-      await expect(borrowerOperations.rebalance(parseEther("2"))).to.be.revertedWith("Not enough ETH");
-      await expect(borrowerOperations.rebalance(0)).to.emit(borrowerOperations, "Rebalanced").withArgs(0, 0);
+      await expect(borrowerOperations.rebalanceWBETH(parseEther("2"))).to.be.revertedWith("Not enough ETH");
+      await expect(borrowerOperations.rebalanceWBETH(0)).to.emit(borrowerOperations, "RebalancedWBETH").withArgs(0, 0);
 
       await expect(borrowerOperations.withdrawCollInETH(await owner.getAddress(), 1))
         .to.be.revertedWith("Not wBETH TroveManager");
