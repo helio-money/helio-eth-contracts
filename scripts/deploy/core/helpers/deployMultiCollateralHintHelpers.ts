@@ -13,7 +13,7 @@ export const deployMultiCollateralHintHelpers = async (borrowerOperations: Contr
   await multiCollateralHintHelpers.deployed();
   console.log("MultiCollateralHintHelpers deployed to:", multiCollateralHintHelpers.address);
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: multiCollateralHintHelpers.address,

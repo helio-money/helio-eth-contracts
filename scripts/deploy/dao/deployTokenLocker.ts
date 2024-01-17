@@ -14,9 +14,9 @@ export const deployTokenLocker = async (listaCore: Contract) => {
     params.lockToTokenRatio,
   ]);
   await tokenLocker.deployed();
-  console.log("TokenLocker deployed to:", await tokenLocker.address);
+  console.log("TokenLocker deployed to:", tokenLocker.address);
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: tokenLocker.address,

@@ -5,7 +5,7 @@ import { parseEther } from "ethers/lib/utils";
 
 const addresses = DEPLOYED_ADDRESSES[11155111];
 
-export const openTrove = async () => {
+export const adjustTrove = async () => {
   let signer: Signer;
   if (hre.network.name === "hardhat") {
     const signers = await ethers.getSigners();
@@ -16,6 +16,7 @@ export const openTrove = async () => {
   } else {
     throw Error("Unsupported network");
   }
+
   const factory = await ethers.getContractAt("Factory", addresses.Factory);
   const troveManager = await factory.troveManagers(0);
   const borrowOperations = await ethers.getContractAt(
@@ -23,18 +24,20 @@ export const openTrove = async () => {
     addresses.BorrowOperations
   );
 
-
-  const tx = await borrowOperations.openTrove(
+  const tx = await borrowOperations.adjustTrove(
     troveManager,
     await signer.getAddress(),
-    0, // collAmount
     parseEther("0.33").toString(), // maxFeePercentage
-    parseEther("100").toString(), // debtAmount
+    0, // collDeposit
+    0, // collWithdrawal
+    parseEther("100").toString(), // debtChange
+    true, // isDebtIncrease
     ethers.constants.AddressZero,
     ethers.constants.AddressZero,
     {
       value: parseEther("0.1"),
     }
   );
-  console.log("Opening a trove done...", tx.hash);
-};
+
+  console.log("Adjust a trove done...", tx.hash);
+}

@@ -29,7 +29,7 @@ export const deployLiquidationManager = async (
   await factory.setLiquidationManager(liquidationManager.address);
   console.log("Updated liquidationManager in Factory...");
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: liquidationManager.address,

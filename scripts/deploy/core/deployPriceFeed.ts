@@ -6,6 +6,19 @@ const params = DEPLOYMENT_PARAMS[11155111];
 
 export const deployPriceFeed = async (listaCore: Contract) => {
   console.log("Deploying PriceFeed...");
+
+  if (hre.network.name === "hardhat") {
+    const ethFeed = await ethers.deployContract("MockAggregator", []);
+    await ethFeed.deployed();
+    const priceFeed = await ethers.deployContract("InternalPriceFeed", [
+      listaCore.address,
+      ethFeed.address,
+    ]);
+    await priceFeed.deployed();
+    console.log("ListaFeed deployed to:", priceFeed.address);
+    return priceFeed;
+  }
+
   const priceFeed = await ethers.deployContract("PriceFeed", [
     listaCore.address,
     params.ethFeed,
@@ -18,8 +31,7 @@ export const deployPriceFeed = async (listaCore: Contract) => {
   await listaCore.setPriceFeed(priceFeed.address);
   console.log("Updated priceFeed in ListaCore.");
 
-  const v = true;
-  while (v) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: priceFeed.address,

@@ -37,7 +37,7 @@ export const deployDebtToken = async (
   await factory.setDebtToken(debtToken.address);
   console.log("Updated debtToken in Factory...");
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: debtToken.address,

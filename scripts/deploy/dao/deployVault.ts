@@ -20,7 +20,7 @@ export const deployVault = async (
     params.manager,
   ]);
   await vault.deployed();
-  console.log("ListaVault deployed to:", await vault.address);
+  console.log("ListaVault deployed to:", vault.address);
 
   console.log("Updating ListaVault in StabilityPool...");
   await stabilityPool.setVault(vault.address);
@@ -40,7 +40,7 @@ export const deployVault = async (
     }
   }
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: vault.address,

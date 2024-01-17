@@ -9,6 +9,7 @@ export const deployTroveManager = async (
   debtToken: Contract,
   borrowOperations: Contract,
   liquidationManager: Contract,
+  vault: Contract,
 ) => {
   console.log("Deploying TroveManager...");
   const troveManager = await ethers.deployContract("TroveManager", [
@@ -16,15 +17,14 @@ export const deployTroveManager = async (
     params.gasPool,
     debtToken.address,
     borrowOperations.address,
-    params.vault,
+    vault.address,
     liquidationManager.address,
     params.gasCompensation
   ]);
   await troveManager.deployed();
   console.log("TroveManager deployed to:", troveManager.address);
 
-  const v = true;
-  while (v) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: troveManager.address,
@@ -33,7 +33,7 @@ export const deployTroveManager = async (
           params.gasPool,
           debtToken.address,
           borrowOperations.address,
-          params.vault,
+          vault.address,
           liquidationManager.address,
           params.gasCompensation
         ],

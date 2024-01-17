@@ -7,7 +7,7 @@ export const deployTroveManagerGetters = async (factory: Contract) => {
   await troveManagerGetters.deployed();
   console.log("TroveManagerGetters deployed to:", troveManagerGetters.address);
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: troveManagerGetters.address,

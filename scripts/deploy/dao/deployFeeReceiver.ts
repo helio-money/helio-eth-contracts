@@ -13,7 +13,7 @@ export const deployFeeReceiver = async (listaCore: Contract) => {
   await listaCore.setFeeReceiver(feeReceiver.address);
   console.log("Updated feeReceiver in ListaCore...");
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: feeReceiver.address,
