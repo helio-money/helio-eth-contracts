@@ -534,7 +534,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
             );
         }
 
-        // If we are incrasing collateral, send tokens to the trove manager prior to adjusting the trove
+        // If we are increasing collateral, send tokens to the trove manager prior to adjusting the trove
         if (vars.isCollIncrease)
             collateralToken.safeTransferFrom(
                 msg.sender,
