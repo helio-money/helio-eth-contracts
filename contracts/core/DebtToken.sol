@@ -284,7 +284,7 @@ contract DebtToken is OFT {
             )
         );
         address recoveredAddress = ecrecover(digest, v, r, s);
-        require(recoveredAddress == owner, "Debt: invalid signature");
+        require(recoveredAddress == owner && recoveredAddress != address(0), "Debt: invalid signature");
         _approve(owner, spender, amount);
     }
 

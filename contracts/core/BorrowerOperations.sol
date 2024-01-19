@@ -314,7 +314,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         );
 
         // Move the collateral to the Trove Manager - collateral will be wBETH if msg.value > 0
-        collateralToken.safeTransfer(address(troveManager), _collateralAmount);
+        collateralToken.safeTransferFrom(msg.sender, address(troveManager), _collateralAmount);
 
         //  and mint the DebtAmount to the caller and gas compensation for Gas Pool
         debtToken.mintWithGasCompensation(msg.sender, _debtAmount);
@@ -534,9 +534,10 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
             );
         }
 
-        // If we are incrasing collateral, send tokens to the trove manager prior to adjusting the trove
+        // If we are increasing collateral, send tokens to the trove manager prior to adjusting the trove
         if (vars.isCollIncrease)
-            collateralToken.safeTransfer(
+            collateralToken.safeTransferFrom(
+                msg.sender,
                 address(troveManager),
                 vars.collChange
             );
@@ -686,13 +687,6 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
          * - The adjustment won't pull the TCR below CCR
          */
 
-        // Get the trove's old ICR before the adjustment
-        uint256 oldICR = ListaMath._computeCR(
-            _vars.coll,
-            _vars.debt,
-            _vars.price
-        );
-
         // Get the trove's new ICR after the adjustment
         uint256 newICR = _getNewICRFromTroveChange(
             _vars.coll,
@@ -705,6 +699,13 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         );
 
         if (_isRecoveryMode) {
+            // Get the trove's old ICR before the adjustment
+            uint256 oldICR = ListaMath._computeCR(
+                _vars.coll,
+                _vars.debt,
+                _vars.price
+            );
+
             require(
                 _collWithdrawal == 0,
                 "BorrowerOps: Collateral withdrawal not permitted Recovery Mode"

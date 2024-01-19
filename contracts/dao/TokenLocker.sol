@@ -485,6 +485,7 @@ contract TokenLocker is ListaOwnable, SystemStart {
     }
 
     function _lock(address _account, uint256 _amount, uint256 _weeks) internal {
+        require(_weeks > 0, "Min 1 week");
         require(_weeks <= MAX_LOCK_WEEKS, "Exceeds MAX_LOCK_WEEKS");
         AccountData storage accountData = accountLockData[_account];
 
