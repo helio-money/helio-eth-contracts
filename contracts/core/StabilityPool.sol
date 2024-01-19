@@ -445,6 +445,7 @@ contract StabilityPool is ListaOwnable, SystemStart {
         uint256 _debtToOffset,
         uint256 _collToAdd
     ) external virtual {
+        require(_debtToOffset <= totalDebtTokenDeposits, "No enough debt token balance for offset");
         _offset(collateral, _debtToOffset, _collToAdd);
     }
 
