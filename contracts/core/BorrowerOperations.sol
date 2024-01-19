@@ -687,13 +687,6 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
          * - The adjustment won't pull the TCR below CCR
          */
 
-        // Get the trove's old ICR before the adjustment
-        uint256 oldICR = ListaMath._computeCR(
-            _vars.coll,
-            _vars.debt,
-            _vars.price
-        );
-
         // Get the trove's new ICR after the adjustment
         uint256 newICR = _getNewICRFromTroveChange(
             _vars.coll,
@@ -706,6 +699,13 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         );
 
         if (_isRecoveryMode) {
+            // Get the trove's old ICR before the adjustment
+            uint256 oldICR = ListaMath._computeCR(
+                _vars.coll,
+                _vars.debt,
+                _vars.price
+            );
+
             require(
                 _collWithdrawal == 0,
                 "BorrowerOps: Collateral withdrawal not permitted Recovery Mode"
