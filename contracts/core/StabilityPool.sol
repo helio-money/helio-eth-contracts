@@ -655,9 +655,6 @@ contract StabilityPool is ListaOwnable, SystemStart {
     function _accrueDepositorCollateralGain(
         address _depositor
     ) private returns (bool hasGains) {
-        uint80[256] storage depositorGains = collateralGainsByDepositor[
-            _depositor
-        ];
         uint256 collaterals = collateralTokens.length;
         uint256 initialDeposit = accountDeposits[_depositor].amount;
         hasGains = false;
@@ -676,7 +673,9 @@ contract StabilityPool is ListaOwnable, SystemStart {
             scaleSnapshot + 1
         ];
         uint256[256] storage depSums = depositSums[_depositor];
-
+        uint80[256] storage depositorGains = collateralGainsByDepositor[
+            _depositor
+        ];
         for (uint256 i = 0; i < collaterals; i++) {
             if (sums[i] == 0) continue; // Collateral was overwritten or not gains
             hasGains = true;
