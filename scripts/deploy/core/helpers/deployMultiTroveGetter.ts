@@ -6,7 +6,7 @@ export const deployMultiTroveGetter = async () => {
   await multiTroveGetter.deployed();
   console.log("MultiTroveGetter deployed to:", multiTroveGetter.address);
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: multiTroveGetter.address,

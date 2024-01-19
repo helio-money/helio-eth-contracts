@@ -9,24 +9,22 @@ export const deployIncentiveVoting = async (
   const incentiveVoting = await ethers.deployContract("IncentiveVoting", [
     listaCore.address,
     tokenLocker.address,
-    ethers.constants.AddressZero,
+    ethers.constants.AddressZero, // vault
   ]);
   await incentiveVoting.deployed();
-  console.log("IncentiveVoting deployed to:", await incentiveVoting.address);
+  console.log("IncentiveVoting deployed to:", incentiveVoting.address);
 
   console.log("Updating IncentiveVoter in TokenLocker...");
   await tokenLocker.setIncentiveVoter(incentiveVoting.address);
   console.log("Updated IncentiveVoter in TokenLocker...");
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: incentiveVoting.address,
         constructorArguments: [
           listaCore.address,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
-          ethers.constants.AddressZero,
+          tokenLocker.address,
           ethers.constants.AddressZero,
         ],
       });

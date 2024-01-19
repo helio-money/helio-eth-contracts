@@ -29,7 +29,7 @@ export const deployFactory = async (
   await borrowerOperations.setFactory(factory.address);
   console.log("Updated factory in BorrowerOperations...");
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: factory.address,
@@ -53,7 +53,19 @@ export const deployFactory = async (
 };
 
 export const deployNewInstance = async (factory: Contract, priceFeed: Contract, troveManager: Contract, sortedTroves: Contract) => {
-  const wBETH = DEPLOYMENT_PARAMS[11155111].wBETH;
+  let wBETH = DEPLOYMENT_PARAMS[11155111].wBETH;
+
+  if (hre.network.name === "hardhat") {
+    console.log("Deploying CollateralToken...");
+    const collateralToken = await ethers.deployContract("CollateralToken", []);
+    await collateralToken.deployed();
+    console.log("CollateralToken deployed to:", collateralToken.address);
+    wBETH = collateralToken.address;
+    const ethFeed = await ethers.deployContract("MockAggregator", []);
+    await ethFeed.deployed();
+
+    await priceFeed.setOracle(collateralToken.address, ethFeed.address, 3600, "0x00000000", 18, false);
+  }
 
   const tx = await factory.deployNewInstance(
     wBETH,

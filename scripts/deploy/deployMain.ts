@@ -16,6 +16,7 @@ import { deployInterimAdmin } from "./dao/deployInterimAdmin";
 import { deployListaToken } from "./dao/deployListaToken";
 import { deployTokenLocker } from "./dao/deployTokenLocker";
 import { deployVault } from "./dao/deployVault";
+import { deployFeeReceiver } from "./dao/deployFeeReceiver";
 import { deployCollateralToken } from "./test/deployCollateralToken";
 import { Contract, Signer } from "ethers";
 
@@ -53,11 +54,21 @@ export const deployMain = async () => {
     borrowerOperations,
     factory
   );
+
+  // DAO
+  const interimAdmin = await deployInterimAdmin(listaCore);
+  const tokenLocker = await deployTokenLocker(listaCore);
+  const incentiveVoting = await deployIncentiveVoting(listaCore, tokenLocker);
+  const vault = await deployVault(listaCore, stabilityPool, tokenLocker, incentiveVoting);
+  const listaToken = await deployListaToken(vault, tokenLocker);
+  const feeReceiver = await deployFeeReceiver(listaCore);
+
   const troveManager = await deployTroveManager(
     listaCore,
     debtToken,
     borrowerOperations,
     liquidationManager,
+    vault
   );
   const sortedTroves = await deploySortedTroves();
   const multiTroveGetter = await deployMultiTroveGetter();
@@ -66,7 +77,6 @@ export const deployMain = async () => {
 
   deployNewInstance(factory, priceFeed, troveManager, sortedTroves);
 
-  //  console.log("TestToken:", collateralToken.address);
   console.log("ListaCore:", listaCore.address);
   console.log("PriceFeed:", priceFeed.address);
   console.log("BorrowOperations:", borrowerOperations.address);
@@ -74,13 +84,15 @@ export const deployMain = async () => {
   console.log("Factory:", factory.address);
   console.log("LiquidationManager:", liquidationManager.address);
   console.log("DebtToken:", debtToken.address);
-  console.log("ListaToken:", debtToken.address);
-  console.log("Impl TroveManager:", troveManager.address);
-  console.log("Impl SortedTroves:", sortedTroves.address);
+  console.log("TokenLocker:", tokenLocker.address);
+  console.log("IncentiveVoting:", incentiveVoting.address);
+  console.log("Vault:", vault.address);
+  console.log("ListaToken:", listaToken.address);
+  console.log("TroveManager:", troveManager.address);
+  console.log("SortedTroves:", sortedTroves.address);
+  console.log("InterimAdmin:", interimAdmin.address);
   console.log("MultiTroveGetter:", multiTroveGetter.address);
-  console.log("TroveManagerGetter:", troveManagerGetter.address);
+  console.log("TroveManagerGetters:", troveManagerGetter.address);
   console.log("MultiCollateralHintHelpers:", multiCollateralHintHelpers.address);
-}
-
-const deployDao = async () => {
+  console.log("FeeReceiver:", feeReceiver.address);
 }

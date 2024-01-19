@@ -2,11 +2,14 @@ import { closeTrove } from "./init/closeTrove";
 import { deployNewInstance } from "./init/deployNewInstance";
 import { initPriceFeed } from "./init/initPriceFeed";
 import { openTrove } from "./init/openTrove";
+import { adjustTrove } from "./init/adjustTrove";
+import { depositToSP, withdrawFromSP } from "./init/depositToSP";
 
 async function main() {
-  await initPriceFeed();
-  await deployNewInstance();
   await openTrove();
+  await adjustTrove();
+  await depositToSP();
+  await withdrawFromSP();
   await closeTrove();
 }
 

@@ -21,12 +21,10 @@ export const DEPLOYMENT_PARAMS = {
         debtTokenName: "Lista lisUSD",
         debtTokenSymbol: "lisUSD",
         gasPool: "0xaBec96E569aEd73DF37C4558f91aCaEAe1619e16",
-        vault: "0xaBec96E569aEd73DF37C4558f91aCaEAe1619e16",
         lzEndpoint: "0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1",
         gasCompensation: "1000000000000000000", // 200000000000000000000
         minNetDebt: "1000000000000000000",
         manager: "0xaBec96E569aEd73DF37C4558f91aCaEAe1619e16",
         lockToTokenRatio: "1000000000000000000",
-        feeReceiver: "0xaBec96E569aEd73DF37C4558f91aCaEAe1619e16",
     },
 };

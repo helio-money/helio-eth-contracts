@@ -20,8 +20,7 @@ export const deployBorrowerOperations = async (listaCore: Contract) => {
   console.log("BorrowerOperations deployed to:", borrowerOperations.address);
 
 
-  const v = true;
-  while (v) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: borrowerOperations.address,

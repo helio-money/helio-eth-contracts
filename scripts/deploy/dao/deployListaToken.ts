@@ -15,13 +15,13 @@ export const deployListaToken = async (
         tokenLocker.address,
     ]);
     await listaToken.deployed();
-    console.log("ListaToken deployed to:", await listaToken.address);
+    console.log("ListaToken deployed to:", listaToken.address);
 
     console.log("Updating LockToken in TokenLocker...");
     await tokenLocker.setLockToken(listaToken.address);
     console.log("Updated LockToken in TokenLocker...");
 
-    while (true) {
+    while (hre.network.name !== "hardhat") {
         try {
             await hre.run("verify:verify", {
                 address: listaToken.address,

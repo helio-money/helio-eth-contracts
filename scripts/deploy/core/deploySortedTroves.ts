@@ -6,8 +6,7 @@ export const deploySortedTroves = async () => {
   await sortedTroves.deployed();
   console.log("SortedTroves deployed to:", sortedTroves.address);
 
-  const v = true;
-  while (v) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: sortedTroves.address,

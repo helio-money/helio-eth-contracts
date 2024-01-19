@@ -9,21 +9,21 @@ export const deployStabilityPool = async (listaCore: Contract) => {
   const stabilityPool = await ethers.deployContract("StabilityPool", [
     listaCore.address,
     ethers.constants.AddressZero, // debtToken
-    params.vault, // vault
+    ethers.constants.AddressZero, // vault,
     ethers.constants.AddressZero, // factory
     ethers.constants.AddressZero, // liquidationManager
   ]);
   await stabilityPool.deployed();
   console.log("StabilityPool deployed to:", stabilityPool.address);
 
-  while (true) {
+  while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
         address: stabilityPool.address,
         constructorArguments: [
           listaCore.address,
           ethers.constants.AddressZero, // debtToken
-          params.vault, // vault
+          ethers.constants.AddressZero, // vault,
           ethers.constants.AddressZero, // factory
           ethers.constants.AddressZero, // liquidationManager
         ],
@@ -36,3 +36,8 @@ export const deployStabilityPool = async (listaCore: Contract) => {
 
   return stabilityPool;
 };
+
+export const depositToSP = async (stabilityPool: Contract) => {
+  await stabilityPool.provideToSP(100);
+  console.log("Deposited 100 lisUSD to StabilityPool");
+}

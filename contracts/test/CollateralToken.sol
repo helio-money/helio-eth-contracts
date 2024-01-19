@@ -10,4 +10,8 @@ contract CollateralToken is ERC20 {
     function mint(address _account, uint256 _amount) external {
         _mint(_account, _amount);
     }
+
+    function exchangeRate() external pure returns (uint256) {
+        return 1e18;
+    }
 }
