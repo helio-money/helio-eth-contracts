@@ -314,7 +314,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         );
 
         // Move the collateral to the Trove Manager - collateral will be wBETH if msg.value > 0
-        collateralToken.safeTransfer(address(troveManager), _collateralAmount);
+        collateralToken.safeTransferFrom(msg.sender, address(troveManager), _collateralAmount);
 
         //  and mint the DebtAmount to the caller and gas compensation for Gas Pool
         debtToken.mintWithGasCompensation(msg.sender, _debtAmount);
@@ -536,7 +536,8 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
 
         // If we are incrasing collateral, send tokens to the trove manager prior to adjusting the trove
         if (vars.isCollIncrease)
-            collateralToken.safeTransfer(
+            collateralToken.safeTransferFrom(
+                msg.sender,
                 address(troveManager),
                 vars.collChange
             );
