@@ -3,7 +3,6 @@
 pragma solidity 0.8.19;
 
 import "../dependencies/DelegatedOps.sol";
-import "../dependencies/SystemStart.sol";
 import "../interfaces/ITokenLocker.sol";
 import "../dependencies/ListaOwnable.sol";
 
@@ -15,10 +14,11 @@ import "../dependencies/ListaOwnable.sol";
 
             Conceptually, incentive voting functions similarly to Curve's gauge weight voting.
  */
-contract IncentiveVoting is ListaOwnable, DelegatedOps, SystemStart {
+contract IncentiveVoting is ListaOwnable, DelegatedOps {
     uint256 public constant MAX_POINTS = 10000; // must be less than 2**16 or things will break
     uint256 public constant MAX_LOCK_WEEKS = 52; // must be the same as `MultiLocker`
 
+    uint256 immutable startTime;
     ITokenLocker public immutable tokenLocker;
     address public vault;
 
@@ -93,7 +93,9 @@ contract IncentiveVoting is ListaOwnable, DelegatedOps, SystemStart {
         address _listaCore,
         ITokenLocker _tokenLocker,
         address _vault
-    ) ListaOwnable(_listaCore) SystemStart(_listaCore) {
+    ) ListaOwnable(_listaCore) {
+        startTime = IListaCore(_listaCore).startTime();
+
         tokenLocker = _tokenLocker;
         setVault(_vault);
     }
@@ -746,5 +748,9 @@ contract IncentiveVoting is ListaOwnable, DelegatedOps, SystemStart {
         totalWeeklyWeights[systemWeek] = uint40(
             getTotalWeightWrite() - totalWeight
         );
+    }
+
+    function getWeek() public view returns (uint256 week) {
+        return (block.timestamp - startTime) / 1 weeks;
     }
 }

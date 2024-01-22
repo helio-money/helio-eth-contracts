@@ -10,10 +10,10 @@ import "../interfaces/IListaCore.sol";
     @notice Contracts inheriting `ListaOwnable` have the same owner as `ListaCore`.
             The ownership cannot be independently modified or renounced.
  */
-contract ListaOwnable is Initializable {
-    IListaCore public immutable LISTA_CORE;
+contract InitializeListaOwnable is Initializable {
+    IListaCore public LISTA_CORE;
 
-    constructor(address _listaCore) {
+    function __ListaOwnable_init(address _listaCore) internal onlyInitializing {
         LISTA_CORE = IListaCore(_listaCore);
     }
 

@@ -1,13 +1,15 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract, Signer } from "ethers";
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 import { ZERO_ADDRESS } from "../../../test/ts/utils";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
 export const deployBorrowerOperations = async (listaCore: Contract) => {
   console.log("Deploying BorrowerOperations...");
-  const borrowerOperations = await ethers.deployContract("BorrowerOperations", [
+
+  const BorrowerOperations = await ethers.getContractFactory("BorrowerOperations");
+  const borrowerOperations = await upgrades.deployProxy(BorrowerOperations, [
     listaCore.address,
     params.wBETH, // wbeth
     params.referral, // referral
@@ -16,7 +18,7 @@ export const deployBorrowerOperations = async (listaCore: Contract) => {
     params.minNetDebt, // minNetDebt
     params.gasCompensation, // gasCompensation
   ]);
-  await borrowerOperations.deployed();
+
   console.log("BorrowerOperations deployed to:", borrowerOperations.address);
 
 
@@ -39,5 +41,6 @@ export const deployBorrowerOperations = async (listaCore: Contract) => {
       console.log("retrying...", e);
     }
   }
+
   return borrowerOperations;
 };

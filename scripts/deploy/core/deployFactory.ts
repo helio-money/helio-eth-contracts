@@ -14,8 +14,6 @@ export const deployFactory = async (
     ZERO_ADDRESS, // debtToken
     stabilityPool.address, // stabilityPool
     borrowerOperations.address, // borrowerOperations
-    ethers.constants.AddressZero, // sortedTroves
-    ethers.constants.AddressZero, // troveManager
     ethers.constants.AddressZero, // liquidationManager
   ]);
   await factory.deployed();
@@ -38,8 +36,6 @@ export const deployFactory = async (
           ZERO_ADDRESS, // debtToken
           stabilityPool.address, // stabilityPool
           borrowerOperations.address, // borrowerOperations
-          ethers.constants.AddressZero, // sortedTroves
-          ethers.constants.AddressZero, // troveManager
           ethers.constants.AddressZero, // liquidationManager
         ],
       });

@@ -12,14 +12,15 @@ contract InternalStabilityPool is StabilityPool {
         address _factory,
         address _liquidationManager
     )
-        StabilityPool(
+    {
+        StabilityPool.initialize(
             _listaCore,
             _debtTokenAddress,
             _vault,
             _factory,
             _liquidationManager
-        )
-    {}
+        );
+    }
 
     function setCollateralGainsByDepositor(
         address depositor,

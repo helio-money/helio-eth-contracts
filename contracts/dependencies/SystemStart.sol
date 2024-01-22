@@ -2,16 +2,17 @@
 
 pragma solidity 0.8.19;
 
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../interfaces/IListaCore.sol";
 
 /**
     @title Lista System Start Time
     @dev Provides a unified `startTime` and `getWeek`, used for emissions.
  */
-contract SystemStart {
-    uint256 immutable startTime;
+contract SystemStart is Initializable {
+    uint256 startTime;
 
-    constructor(address listaCore) {
+    function __SystemStart_init(address listaCore) internal onlyInitializing {
         startTime = IListaCore(listaCore).startTime();
     }
 

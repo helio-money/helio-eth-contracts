@@ -13,13 +13,9 @@ contract InternalLiquidationManager is LiquidationManager {
         address _factory,
         uint256 _gasCompensation
     )
-        LiquidationManager(
-            _stabilityPoolAddress,
-            _borrowerOperations,
-            _factory,
-            _gasCompensation
-        )
-    {}
+    {
+        LiquidationManager.initialize(_stabilityPoolAddress, _borrowerOperations, _factory, _gasCompensation);
+    }
 
     function applyLiquidationValuesToTotals(
         LiquidationTotals memory totals,

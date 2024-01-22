@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract } from "ethers";
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -10,13 +10,14 @@ export const deployLiquidationManager = async (
   factory: Contract
 ) => {
   console.log("Deploying LiquidationManager...");
-  const liquidationManager = await ethers.deployContract("LiquidationManager", [
+  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const liquidationManager = await upgrades.deployProxy(LiquidationManager, [
     stabilityPool.address,
     borrowerOperations.address,
     factory.address,
     params.gasCompensation,
   ]);
-  await liquidationManager.deployed();
+
   console.log(
     "LiquidationManager deployed to:", liquidationManager.address
   );

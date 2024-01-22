@@ -36,18 +36,23 @@ export const deployMain = async () => {
   //  const collateralToken = await deployCollateralToken(); // Test Collateral, use existing wBETH on sepolia
   const listaCore = await deployListaCore(owner);
   const priceFeed = await deployPriceFeed(listaCore);
+
   const borrowerOperations = await deployBorrowerOperations(listaCore);
+
   const stabilityPool = await deployStabilityPool(listaCore);
+
   const factory = await deployFactory(
     listaCore,
     stabilityPool,
     borrowerOperations
   );
+
   const liquidationManager = await deployLiquidationManager(
     stabilityPool,
     borrowerOperations,
     factory
   );
+
   const debtToken = await deployDebtToken(
     listaCore,
     stabilityPool,
@@ -68,9 +73,10 @@ export const deployMain = async () => {
     debtToken,
     borrowerOperations,
     liquidationManager,
-    vault
+    vault,
+    factory,
   );
-  const sortedTroves = await deploySortedTroves();
+  const sortedTroves = await deploySortedTroves(factory);
   const multiTroveGetter = await deployMultiTroveGetter();
   const troveManagerGetter = await deployTroveManagerGetters(factory);
   const multiCollateralHintHelpers = await deployMultiCollateralHintHelpers(borrowerOperations);

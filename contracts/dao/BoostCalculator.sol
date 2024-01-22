@@ -48,7 +48,8 @@ import "../dependencies/SystemStart.sol";
             are returned to the unallocated token supply, and distributed again in the
             emissions of future weeks.
  */
-contract BoostCalculator is SystemStart {
+contract BoostCalculator {
+    uint256 immutable startTime;
     ITokenLocker public immutable locker;
 
     // initial number of weeks where all accounts recieve max boost
@@ -64,8 +65,9 @@ contract BoostCalculator is SystemStart {
         address _listaCore,
         ITokenLocker _locker,
         uint256 _graceWeeks
-    ) SystemStart(_listaCore) {
+    ) {
         require(_graceWeeks > 0, "Grace weeks cannot be 0");
+        startTime = IListaCore(_listaCore).startTime();
         locker = _locker;
         MAX_BOOST_GRACE_WEEKS = _graceWeeks + getWeek();
     }
@@ -234,5 +236,9 @@ contract BoostCalculator is SystemStart {
         adjustedAmount += (initialBoosted - finalBoosted) / 2;
 
         return adjustedAmount;
+    }
+
+    function getWeek() public view returns (uint256 week) {
+        return (block.timestamp - startTime) / 1 weeks;
     }
 }

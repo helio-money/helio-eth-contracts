@@ -35,10 +35,11 @@ interface IRewards {
             vault gradually releases tokens to registered emissions receivers
             as determined by `EmissionSchedule` and `BoostCalculator`.
  */
-contract ListaVault is ListaOwnable, SystemStart {
+contract ListaVault is ListaOwnable {
     using Address for address;
     using SafeERC20 for IERC20;
 
+    uint256 immutable startTime;
     IListaToken public immutable listaToken;
     ITokenLocker public immutable locker;
     IIncentiveVoting public immutable voter;
@@ -125,7 +126,9 @@ contract ListaVault is ListaOwnable, SystemStart {
         IIncentiveVoting _voter,
         address _stabilityPool,
         address _manager
-    ) ListaOwnable(_listaCore) SystemStart(_listaCore) {
+    ) ListaOwnable(_listaCore) {
+        startTime = IListaCore(_listaCore).startTime();
+
         listaToken = _token;
         locker = _locker;
         voter = _voter;
@@ -677,5 +680,9 @@ contract ListaVault is ListaOwnable, SystemStart {
         amount = storedPendingReward[claimant];
         // only return values `>= lockToTokenRatio` so we do not report "dust" stored for normal users
         return amount >= lockToTokenRatio ? amount : 0;
+    }
+
+    function getWeek() public view returns (uint256 week) {
+        return (block.timestamp - startTime) / 1 weeks;
     }
 }

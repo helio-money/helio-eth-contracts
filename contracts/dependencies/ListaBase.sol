@@ -2,22 +2,24 @@
 
 pragma solidity 0.8.19;
 
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
 /*
  * Base contract for TroveManager, BorrowerOperations and StabilityPool. Contains global system constants and
  * common functions.
  */
-contract ListaBase {
+contract ListaBase is Initializable {
     uint256 public constant DECIMAL_PRECISION = 1e18;
 
     // Critical system collateral ratio. If the system's total collateral ratio (TCR) falls below the CCR, Recovery Mode is triggered.
     uint256 public constant CCR = 1500000000000000000; // 150%
 
     // Amount of debt to be locked in gas pool on opening troves
-    uint256 public immutable DEBT_GAS_COMPENSATION;
+    uint256 public DEBT_GAS_COMPENSATION;
 
     uint256 public constant PERCENT_DIVISOR = 200; // dividing by 200 yields 0.5%
 
-    constructor(uint256 _gasCompensation) {
+    function __ListaBase_init(uint256 _gasCompensation) internal initializer {
         DEBT_GAS_COMPENSATION = _gasCompensation;
     }
 

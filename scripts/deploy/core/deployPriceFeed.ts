@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract } from "ethers";
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -10,20 +10,21 @@ export const deployPriceFeed = async (listaCore: Contract) => {
   if (hre.network.name === "hardhat") {
     const ethFeed = await ethers.deployContract("MockAggregator", []);
     await ethFeed.deployed();
-    const priceFeed = await ethers.deployContract("InternalPriceFeed", [
+    const PriceFeed = await ethers.getContractFactory("PriceFeed");
+    const priceFeed = await upgrades.deployProxy(PriceFeed, [
       listaCore.address,
       ethFeed.address,
     ]);
-    await priceFeed.deployed();
+
     console.log("ListaFeed deployed to:", priceFeed.address);
     return priceFeed;
   }
 
-  const priceFeed = await ethers.deployContract("PriceFeed", [
+  const PriceFeed = await ethers.getContractFactory("PriceFeed");
+  const priceFeed = await upgrades.deployProxy(PriceFeed, [
     listaCore.address,
     params.ethFeed,
   ]);
-  await priceFeed.deployed();
 
   console.log("ListaFeed deployed to:", priceFeed.address);
 

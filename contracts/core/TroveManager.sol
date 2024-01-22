@@ -14,7 +14,7 @@ import "../interfaces/IPriceFeed.sol";
 import "../dependencies/SystemStart.sol";
 import "../dependencies/ListaBase.sol";
 import "../dependencies/ListaMath.sol";
-import "../dependencies/ListaOwnable.sol";
+import "../dependencies/InitializeListaOwnable.sol";
 
 /**
     @title Lista Trove Manager
@@ -24,20 +24,20 @@ import "../dependencies/ListaOwnable.sol";
             Lista's implementation is modified so that multiple `TroveManager` and `SortedTroves`
             contracts are deployed in tandem, with each pair managing troves of a single collateral
             type.
-
             Functionality related to liquidations has been moved to `LiquidationManager`. This was
             necessary to avoid the restriction on deployed bytecode size.
  */
-contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
+contract TroveManager is ListaBase, InitializeListaOwnable, SystemStart, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // --- Connected contract declarations ---
 
-    address public immutable borrowerOperationsAddress;
-    address public immutable liquidationManager;
-    address immutable gasPoolAddress;
-    IDebtToken public immutable debtToken;
-    IListaVault public immutable vault;
+    address public borrowerOperationsAddress;
+    address public liquidationManager;
+    address public factory;
+    address gasPoolAddress;
+    IDebtToken public debtToken;
+    IListaVault public vault;
 
     IPriceFeed public priceFeed;
     IERC20 public collateralToken;
@@ -245,24 +245,31 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
         _;
     }
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _listaCore,
         address _gasPoolAddress,
         address _debtTokenAddress,
         address _borrowerOperationsAddress,
         address _vault,
+        address _factory,
         address _liquidationManager,
         uint256 _gasCompensation
-    )
-        ListaOwnable(_listaCore)
-        ListaBase(_gasCompensation)
-        SystemStart(_listaCore)
-    {
+    ) public initializer {
+        __ListaOwnable_init(_listaCore);
+        __ListaBase_init(_gasCompensation);
+        __SystemStart_init(_listaCore);
+
         gasPoolAddress = _gasPoolAddress;
         debtToken = IDebtToken(_debtTokenAddress);
         borrowerOperationsAddress = _borrowerOperationsAddress;
         vault = IListaVault(_vault);
         liquidationManager = _liquidationManager;
+        factory = _factory;
     }
 
     function setAddresses(
@@ -270,6 +277,7 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
         address _sortedTrovesAddress,
         address _collateralToken
     ) external {
+        require(msg.sender == factory, "Only factory");
         require(address(sortedTroves) == address(0));
         priceFeed = IPriceFeed(_priceFeedAddress);
         sortedTroves = ISortedTroves(_sortedTrovesAddress);
@@ -358,6 +366,7 @@ contract TroveManager is ListaBase, ListaOwnable, SystemStart, ReentrancyGuard {
         uint256 _maxSystemDebt,
         uint256 _MCR
     ) public {
+        require(msg.sender == factory, "Only factory");
         require(!sunsetting, "Cannot change after sunset");
         require(
             _MCR <= CCR && _MCR >= 1100000000000000000,

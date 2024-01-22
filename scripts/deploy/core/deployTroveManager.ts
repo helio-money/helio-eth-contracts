@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract, Signer } from "ethers";
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -10,17 +10,20 @@ export const deployTroveManager = async (
   borrowOperations: Contract,
   liquidationManager: Contract,
   vault: Contract,
+  factory: Contract
 ) => {
   console.log("Deploying TroveManager...");
-  const troveManager = await ethers.deployContract("TroveManager", [
+  const TroveManager = await ethers.getContractFactory("TroveManager");
+  const troveManager = await upgrades.deployProxy(TroveManager, [
     listaCore.address,
     params.gasPool,
     debtToken.address,
     borrowOperations.address,
     vault.address,
+    factory.address,
     liquidationManager.address,
     params.gasCompensation
-  ]);
+  ], { unsafeAllow: ['constructor'] });
   await troveManager.deployed();
   console.log("TroveManager deployed to:", troveManager.address);
 
@@ -34,6 +37,7 @@ export const deployTroveManager = async (
           debtToken.address,
           borrowOperations.address,
           vault.address,
+          factory.address,
           liquidationManager.address,
           params.gasCompensation
         ],

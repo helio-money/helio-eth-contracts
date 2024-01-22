@@ -4,8 +4,8 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../dependencies/DelegatedOps.sol";
-import "../dependencies/SystemStart.sol";
 import "../interfaces/ITokenLocker.sol";
+import "../interfaces/IListaCore.sol";
 
 /**
     @title Lista DAO Admin Voter
@@ -13,7 +13,8 @@ import "../interfaces/ITokenLocker.sol";
             arbitrary function calls only after a required percentage of LISTA
             lockers have signalled in favor of performing the action.
  */
-contract AdminVoting is DelegatedOps, SystemStart {
+contract AdminVoting is DelegatedOps {
+    uint256 immutable startTime;
     using Address for address;
 
     event ProposalCreated(
@@ -82,10 +83,11 @@ contract AdminVoting is DelegatedOps, SystemStart {
         uint256 _minCreateProposalPct,
         uint256 _passingPct,
         uint256 _bootstrapFinish
-    ) SystemStart(_listaCore) {
+    ) {
         tokenLocker = _tokenLocker;
         listaCore = IListaCore(_listaCore);
 
+        startTime = listaCore.startTime();
         minCreateProposalPct = _minCreateProposalPct;
         passingPct = _passingPct;
 
@@ -364,4 +366,9 @@ contract AdminVoting is DelegatedOps, SystemStart {
         }
         return false;
     }
+
+    function getWeek() public view returns (uint256 week) {
+        return (block.timestamp - startTime) / 1 weeks;
+    }
+
 }
