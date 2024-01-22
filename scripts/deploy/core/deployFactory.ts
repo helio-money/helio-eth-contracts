@@ -1,7 +1,7 @@
 import { BigNumber, Contract } from "ethers";
 import hre, { ethers } from "hardhat";
+import { expect } from "chai";
 import { ZERO_ADDRESS } from "../../../test/ts/utils";
-import { DEPLOYMENT_PARAMS } from "../../../constants/index"
 
 export const deployFactory = async (
   listaCore: Contract,
@@ -27,6 +27,8 @@ export const deployFactory = async (
   await borrowerOperations.setFactory(factory.address);
   console.log("Updated factory in BorrowerOperations...");
 
+  expect(await factory.borrowerOperations()).to.be.equal(borrowerOperations.address);
+
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
@@ -48,37 +50,39 @@ export const deployFactory = async (
   return factory;
 };
 
-export const deployNewInstance = async (factory: Contract, priceFeed: Contract, troveManager: Contract, sortedTroves: Contract) => {
-  let wBETH = DEPLOYMENT_PARAMS[11155111].wBETH;
+export const deployNewInstance = async (factory: Contract, priceFeed: Contract, troveManager: Contract, sortedTroves: Contract, wBETH: string, borrowerOperations: Contract) => {
 
   if (hre.network.name === "hardhat") {
-    console.log("Deploying CollateralToken...");
-    const collateralToken = await ethers.deployContract("CollateralToken", []);
-    await collateralToken.deployed();
-    console.log("CollateralToken deployed to:", collateralToken.address);
-    wBETH = collateralToken.address;
     const ethFeed = await ethers.deployContract("MockAggregator", []);
     await ethFeed.deployed();
 
-    await priceFeed.setOracle(collateralToken.address, ethFeed.address, 3600, "0x00000000", 18, false);
+    await priceFeed.setOracle(wBETH, ethFeed.address, 3600, "0x00000000", 18, false);
   }
 
-  const tx = await factory.deployNewInstance(
-    wBETH,
-    priceFeed.address,
-    troveManager.address,
-    sortedTroves.address,
-    {
-      minuteDecayFactor: BigNumber.from('999037758833783000'), // minuteDecayFactor
-      redemptionFeeFloor: 0, // redemptionFeeFloor
-      maxRedemptionFee: 0, // redemptionFeeCeil
-      borrowingFeeFloor: BigNumber.from('5000000000000000'), // borrowFeeFloor
-      maxBorrowingFee: BigNumber.from('50000000000000000'), // borrowFeeCeil
-      interestRateInBps: 0, // interestRateInBps
-      maxDebt: BigNumber.from('200000000000000000000000000'), // maxDebt
-      MCR: BigNumber.from('1100000000000000000') // MCR
-    }
-  );
+  try {
+    const tx = await factory.deployNewInstance(
+      wBETH,
+      priceFeed.address,
+      troveManager.address,
+      sortedTroves.address,
+      {
+        minuteDecayFactor: BigNumber.from('999037758833783000'), // minuteDecayFactor
+        redemptionFeeFloor: 0, // redemptionFeeFloor
+        maxRedemptionFee: 0, // redemptionFeeCeil
+        borrowingFeeFloor: BigNumber.from('5000000000000000'), // borrowFeeFloor
+        maxBorrowingFee: BigNumber.from('50000000000000000'), // borrowFeeCeil
+        interestRateInBps: 0, // interestRateInBps
+        maxDebt: BigNumber.from('200000000000000000000000000'), // maxDebt
+        MCR: BigNumber.from('1100000000000000000') // MCR
+      }
+    );
+    expect(tx).to.emit(factory, "NewDeployment").withArgs(wBETH, priceFeed.address, troveManager.address, sortedTroves.address);
+    expect(tx).to.emit(borrowerOperations, "CollateralConfigured").withArgs(troveManager.address, wBETH);
 
-  console.log("Deployed new instance...", tx.hash);
+    expect(await factory.troveManagers(0)).to.be.equal(troveManager.address);
+
+    console.log("Deployed new instance...", tx.hash);
+  } catch (e) {
+    console.log("deployNewInstance error", e);
+  }
 }

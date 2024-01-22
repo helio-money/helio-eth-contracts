@@ -1,8 +1,5 @@
 import { Contract } from "ethers";
 import hre, { ethers, upgrades } from "hardhat";
-import { DEPLOYMENT_PARAMS } from "../../../constants";
-
-const params = DEPLOYMENT_PARAMS[11155111];
 
 export const deployStabilityPool = async (listaCore: Contract) => {
   console.log("Deploying StabilityPool...");
@@ -36,8 +33,3 @@ export const deployStabilityPool = async (listaCore: Contract) => {
 
   return stabilityPool;
 };
-
-export const depositToSP = async (stabilityPool: Contract) => {
-  await stabilityPool.provideToSP(100);
-  console.log("Deposited 100 lisUSD to StabilityPool");
-}

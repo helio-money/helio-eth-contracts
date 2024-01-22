@@ -100,6 +100,8 @@ contract Factory is ListaOwnable {
         address sortedTroves,
         DeploymentParams memory params
     ) external onlyOwner {
+        troveManagers.push(troveManager);
+
         ITroveManager(troveManager).setAddresses(
             priceFeed,
             sortedTroves,

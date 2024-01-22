@@ -1,3 +1,4 @@
+import { deployCollateralToken } from "../test/deployCollateralToken";
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract, Signer } from "ethers";
 import hre, { ethers, upgrades } from "hardhat";
@@ -5,13 +6,13 @@ import { ZERO_ADDRESS } from "../../../test/ts/utils";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
-export const deployBorrowerOperations = async (listaCore: Contract) => {
+export const deployBorrowerOperations = async (listaCore: Contract, wBETH: string) => {
   console.log("Deploying BorrowerOperations...");
 
   const BorrowerOperations = await ethers.getContractFactory("BorrowerOperations");
   const borrowerOperations = await upgrades.deployProxy(BorrowerOperations, [
     listaCore.address,
-    params.wBETH, // wbeth
+    wBETH, // wbeth
     params.referral, // referral
     ZERO_ADDRESS, //debtToken.address
     ZERO_ADDRESS, // factory

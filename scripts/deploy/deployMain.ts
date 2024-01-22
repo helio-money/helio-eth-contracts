@@ -17,9 +17,9 @@ import { deployListaToken } from "./dao/deployListaToken";
 import { deployTokenLocker } from "./dao/deployTokenLocker";
 import { deployVault } from "./dao/deployVault";
 import { deployFeeReceiver } from "./dao/deployFeeReceiver";
-import { deployCollateralToken } from "./test/deployCollateralToken";
 import { Contract, Signer } from "ethers";
-
+import { openTrove, depositToSP } from "./test/localTest";
+import { DEPLOYMENT_PARAMS } from "../../constants/index"
 
 export const deployMain = async () => {
   let owner: Signer;
@@ -33,11 +33,18 @@ export const deployMain = async () => {
     throw Error("Unsupported network");
   }
 
-  //  const collateralToken = await deployCollateralToken(); // Test Collateral, use existing wBETH on sepolia
+  let wBETH = DEPLOYMENT_PARAMS[11155111].wBETH;
+  if (hre.network.name === "hardhat") {
+    console.log("Deploying CollateralToken...");
+    const collateralToken = await ethers.deployContract("CollateralToken", []);
+    await collateralToken.deployed();
+    console.log("CollateralToken deployed to:", collateralToken.address);
+    wBETH = collateralToken.address;
+  }
   const listaCore = await deployListaCore(owner);
   const priceFeed = await deployPriceFeed(listaCore);
 
-  const borrowerOperations = await deployBorrowerOperations(listaCore);
+  const borrowerOperations = await deployBorrowerOperations(listaCore, wBETH);
 
   const stabilityPool = await deployStabilityPool(listaCore);
 
@@ -81,7 +88,7 @@ export const deployMain = async () => {
   const troveManagerGetter = await deployTroveManagerGetters(factory);
   const multiCollateralHintHelpers = await deployMultiCollateralHintHelpers(borrowerOperations);
 
-  deployNewInstance(factory, priceFeed, troveManager, sortedTroves);
+  await deployNewInstance(factory, priceFeed, troveManager, sortedTroves, wBETH, borrowerOperations);
 
   console.log("ListaCore:", listaCore.address);
   console.log("PriceFeed:", priceFeed.address);
@@ -101,4 +108,9 @@ export const deployMain = async () => {
   console.log("TroveManagerGetters:", troveManagerGetter.address);
   console.log("MultiCollateralHintHelpers:", multiCollateralHintHelpers.address);
   console.log("FeeReceiver:", feeReceiver.address);
+
+  if (hre.network.name === "hardhat") {
+    await openTrove(troveManager, borrowerOperations, wBETH);
+    await depositToSP(stabilityPool);
+  }
 }

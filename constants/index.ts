@@ -18,7 +18,7 @@ export const DEPLOYMENT_PARAMS = {
         referral: "0xaBec96E569aEd73DF37C4558f91aCaEAe1619e16",
         ethFeed: "0x694AA1769357215DE4FAC081bf1f309aDC325306", // Sepolia ETH:USD price feed
         wBETH: "0xB1ac2827B788a72362971360dE057db36072C48B", // Sepolia WETH
-        debtTokenName: "Lista lisUSD",
+        debtTokenName: "Lista USD",
         debtTokenSymbol: "lisUSD",
         gasPool: "0xaBec96E569aEd73DF37C4558f91aCaEAe1619e16",
         lzEndpoint: "0xae92d5aD7583AD66E49A0c67BAd18F6ba52dDDc1",
