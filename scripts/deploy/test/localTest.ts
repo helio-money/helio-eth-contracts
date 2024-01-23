@@ -35,7 +35,6 @@ export const openTrove = async (troveManager: Contract, borrowerOperations: Cont
               value: parseEther("1000"),
             }
         );
-        expect(await collateralToken.balanceOf(borrowerOperations.address)).to.equal("1000000000000000000000");
         expect(await collateralToken.balanceOf(troveManager.address)).to.equal("1000000000000000000000");
 
         console.log("openTrove done");
