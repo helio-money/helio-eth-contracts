@@ -18,8 +18,9 @@ import { deployTokenLocker } from "./dao/deployTokenLocker";
 import { deployVault } from "./dao/deployVault";
 import { deployFeeReceiver } from "./dao/deployFeeReceiver";
 import { Contract, Signer } from "ethers";
-import { openTrove, depositToSP } from "./test/localTest";
+import { openTrove, depositToSP, adjustTrove, repayDebt, closeTrove } from "./test/localTest";
 import { DEPLOYMENT_PARAMS } from "../../constants/index"
+import { upgradeCore } from "./test/upgradeCore";
 
 export const deployMain = async () => {
   let owner: Signer;
@@ -110,7 +111,23 @@ export const deployMain = async () => {
   console.log("FeeReceiver:", feeReceiver.address);
 
   if (hre.network.name === "hardhat") {
-    await openTrove(troveManager, borrowerOperations, wBETH);
-    await depositToSP(stabilityPool);
+    await localTest(listaCore, borrowerOperations, stabilityPool, troveManager, priceFeed, sortedTroves, wBETH, liquidationManager, debtToken);
   }
+}
+
+const localTest = async (listaCore: Contract, borrowerOperations: Contract, stabilityPool: Contract, troveManager: Contract, priceFeed: Contract, sortedTroves: Contract, wBETH: string, liquidationManager: Contract, debtToken: Contract) => {
+  console.log("Running local test...");
+  await openTrove(troveManager, borrowerOperations, wBETH);
+  await adjustTrove(troveManager, borrowerOperations);
+  await repayDebt(borrowerOperations, troveManager);
+  await depositToSP(stabilityPool);
+
+  await upgradeCore(borrowerOperations, troveManager, liquidationManager, stabilityPool, priceFeed, sortedTroves);
+
+  await adjustTrove(troveManager, borrowerOperations);
+  await repayDebt(borrowerOperations, troveManager);
+//  await closeTrove(borrowerOperations, troveManager, wBETH, debtToken);
+  await depositToSP(stabilityPool);
+
+  console.log("Local test done");
 }
