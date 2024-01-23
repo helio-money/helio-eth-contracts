@@ -1,28 +1,28 @@
-import { Contract } from "ethers";
+import { Contract, ZeroAddress } from "ethers";
 import hre, { ethers, upgrades } from "hardhat";
 
 export const deployStabilityPool = async (listaCore: Contract) => {
   console.log("Deploying StabilityPool...");
   const StabilityPool = await ethers.getContractFactory("StabilityPool");
   const stabilityPool = await upgrades.deployProxy(StabilityPool, [
-    listaCore.address,
-    ethers.constants.AddressZero, // debtToken
-    ethers.constants.AddressZero, // vault,
-    ethers.constants.AddressZero, // factory
-    ethers.constants.AddressZero, // liquidationManager
+    listaCore.target,
+    ZeroAddress, // debtToken
+    ZeroAddress, // vault,
+    ZeroAddress, // factory
+    ZeroAddress, // liquidationManager
   ]);
-  console.log("StabilityPool deployed to:", stabilityPool.address);
+  console.log("StabilityPool deployed to:", stabilityPool.target);
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: stabilityPool.address,
+        address: stabilityPool.target,
         constructorArguments: [
-          listaCore.address,
-          ethers.constants.AddressZero, // debtToken
-          ethers.constants.AddressZero, // vault,
-          ethers.constants.AddressZero, // factory
-          ethers.constants.AddressZero, // liquidationManager
+          listaCore.target,
+          ZeroAddress, // debtToken
+          ZeroAddress, // vault,
+          ZeroAddress, // factory
+          ZeroAddress, // liquidationManager
         ],
       });
       break;

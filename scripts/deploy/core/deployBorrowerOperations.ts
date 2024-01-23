@@ -1,8 +1,7 @@
 import { deployCollateralToken } from "../test/deployCollateralToken";
 import { DEPLOYMENT_PARAMS } from "../../../constants";
-import { Contract, Signer } from "ethers";
+import { Contract, Signer, ZeroAddress } from "ethers";
 import hre, { ethers, upgrades } from "hardhat";
-import { ZERO_ADDRESS } from "../../../test/ts/utils";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -11,28 +10,28 @@ export const deployBorrowerOperations = async (listaCore: Contract, wBETH: strin
 
   const BorrowerOperations = await ethers.getContractFactory("BorrowerOperations");
   const borrowerOperations = await upgrades.deployProxy(BorrowerOperations, [
-    listaCore.address,
+    listaCore.target,
     wBETH, // wbeth
     params.referral, // referral
-    ZERO_ADDRESS, //debtToken.address
-    ZERO_ADDRESS, // factory
+    ZeroAddress, //debtToken.address
+    ZeroAddress, // factory
     params.minNetDebt, // minNetDebt
     params.gasCompensation, // gasCompensation
   ]);
 
-  console.log("BorrowerOperations deployed to:", borrowerOperations.address);
+  console.log("BorrowerOperations deployed to:", borrowerOperations.target);
 
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: borrowerOperations.address,
+        address: borrowerOperations.target,
         constructorArguments: [
-          listaCore.address,
+          listaCore.target,
           params.wBETH, // wbeth
           params.referral, // referral
-          ZERO_ADDRESS, //debtToken.address
-          ZERO_ADDRESS, // factory
+          ZeroAddress, //debtToken.address
+          ZeroAddress, // factory
           params.minNetDebt, // minNetDebt
           params.gasCompensation, // gasCompensation
         ],

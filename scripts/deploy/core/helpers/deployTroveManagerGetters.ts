@@ -3,16 +3,16 @@ import { Contract } from "ethers";
 
 export const deployTroveManagerGetters = async (factory: Contract) => {
   console.log("Deploying TroveManagerGetters...");
-  const troveManagerGetters = await ethers.deployContract("TroveManagerGetters", [factory.address]);
-  await troveManagerGetters.deployed();
-  console.log("TroveManagerGetters deployed to:", troveManagerGetters.address);
+  const troveManagerGetters = await ethers.deployContract("TroveManagerGetters", [factory.target]);
+  await troveManagerGetters.waitForDeployment();
+  console.log("TroveManagerGetters deployed to:", troveManagerGetters.target);
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: troveManagerGetters.address,
+        address: troveManagerGetters.target,
         constructorArguments: [
-          factory.address
+          factory.target
         ],
       });
       break;

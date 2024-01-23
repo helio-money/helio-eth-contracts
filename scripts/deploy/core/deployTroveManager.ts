@@ -15,30 +15,30 @@ export const deployTroveManager = async (
   console.log("Deploying TroveManager...");
   const TroveManager = await ethers.getContractFactory("TroveManager");
   const troveManager = await upgrades.deployProxy(TroveManager, [
-    listaCore.address,
+    listaCore.target,
     params.gasPool,
-    debtToken.address,
-    borrowOperations.address,
-    vault.address,
-    factory.address,
-    liquidationManager.address,
+    debtToken.target,
+    borrowOperations.target,
+    vault.target,
+    factory.target,
+    liquidationManager.target,
     params.gasCompensation
   ], { unsafeAllow: ['constructor'] });
-  await troveManager.deployed();
-  console.log("TroveManager deployed to:", troveManager.address);
+  await troveManager.waitForDeployment();
+  console.log("TroveManager deployed to:", troveManager.target);
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: troveManager.address,
+        address: troveManager.target,
         constructorArguments: [
-          listaCore.address,
+          listaCore.target,
           params.gasPool,
-          debtToken.address,
-          borrowOperations.address,
-          vault.address,
-          factory.address,
-          liquidationManager.address,
+          debtToken.target,
+          borrowOperations.target,
+          vault.target,
+          factory.target,
+          liquidationManager.target,
           params.gasCompensation
         ],
       });

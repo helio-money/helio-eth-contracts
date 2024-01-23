@@ -4,20 +4,20 @@ import hre, { ethers } from "hardhat";
 export const deployFeeReceiver = async (listaCore: Contract) => {
   console.log("Deploying FeeReceiver...");
   const feeReceiver = await ethers.deployContract("FeeReceiver", [
-    listaCore.address,
+    listaCore.target,
   ]);
-  await feeReceiver.deployed();
-  console.log("FeeReceiver deployed to:", feeReceiver.address);
+  await feeReceiver.waitForDeployment();
+  console.log("FeeReceiver deployed to:", feeReceiver.target);
 
   console.log("Updating feeReceiver in ListaCore...");
-  await listaCore.setFeeReceiver(feeReceiver.address);
+  await listaCore.setFeeReceiver(feeReceiver.target);
   console.log("Updated feeReceiver in ListaCore...");
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: feeReceiver.address,
-        constructorArguments: [listaCore.address],
+        address: feeReceiver.target,
+        constructorArguments: [listaCore.target],
       });
       break;
     } catch (e) {

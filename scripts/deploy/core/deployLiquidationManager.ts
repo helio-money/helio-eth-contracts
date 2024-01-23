@@ -12,32 +12,32 @@ export const deployLiquidationManager = async (
   console.log("Deploying LiquidationManager...");
   const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
   const liquidationManager = await upgrades.deployProxy(LiquidationManager, [
-    stabilityPool.address,
-    borrowerOperations.address,
-    factory.address,
+    stabilityPool.target,
+    borrowerOperations.target,
+    factory.target,
     params.gasCompensation,
   ]);
 
   console.log(
-    "LiquidationManager deployed to:", liquidationManager.address
+    "LiquidationManager deployed to:", liquidationManager.target
   );
 
   console.log("Updating liquidationManager in StabilityPool...");
-  await stabilityPool.setLiquidationManager(liquidationManager.address);
+  await stabilityPool.setLiquidationManager(liquidationManager.target);
   console.log("Updated liquidationManager in StabilityPool...");
 
   console.log("Updating liquidationManager in Factory...");
-  await factory.setLiquidationManager(liquidationManager.address);
+  await factory.setLiquidationManager(liquidationManager.target);
   console.log("Updated liquidationManager in Factory...");
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: liquidationManager.address,
+        address: liquidationManager.target,
         constructorArguments: [
-          stabilityPool.address,
-          borrowerOperations.address,
-          factory.address,
+          stabilityPool.target,
+          borrowerOperations.target,
+          factory.target,
           params.gasCompensation,
         ],
       });

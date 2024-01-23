@@ -14,41 +14,41 @@ export const deployDebtToken = async (
   const debtToken = await ethers.deployContract("DebtToken", [
     params.debtTokenName,
     params.debtTokenSymbol,
-    stabilityPool.address,
-    borrowerOperations.address,
-    listaCore.address,
+    stabilityPool.target,
+    borrowerOperations.target,
+    listaCore.target,
     params.lzEndpoint,
-    factory.address,
+    factory.target,
     params.gasPool,
     params.gasCompensation,
   ]);
-  await debtToken.deployed();
-  console.log("DebtToken deployed to:", debtToken.address);
+  await debtToken.waitForDeployment();
+  console.log("DebtToken deployed to:", debtToken.target);
 
   console.log("Updating debtToken in StabilityPool...");
-  await stabilityPool.setDebtToken(debtToken.address);
+  await stabilityPool.setDebtToken(debtToken.target);
   console.log("Updated debtToken in StabilityPool...");
 
   console.log("Updating debtToken in BorrowerOperations...");
-  await borrowerOperations.setDebtToken(debtToken.address);
+  await borrowerOperations.setDebtToken(debtToken.target);
   console.log("Updated debtToken in BorrowerOperations...");
 
   console.log("Updating debtToken in Factory...");
-  await factory.setDebtToken(debtToken.address);
+  await factory.setDebtToken(debtToken.target);
   console.log("Updated debtToken in Factory...");
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: debtToken.address,
+        address: debtToken.target,
         constructorArguments: [
           params.debtTokenName,
           params.debtTokenSymbol,
-          stabilityPool.address,
-          borrowerOperations.address,
-          listaCore.address,
+          stabilityPool.target,
+          borrowerOperations.target,
+          listaCore.target,
           params.lzEndpoint,
-          factory.address,
+          factory.target,
           params.gasPool,
           params.gasCompensation,
         ],

@@ -4,16 +4,16 @@ import hre, { ethers } from "hardhat";
 export const deployInterimAdmin = async (listaCore: Contract) => {
   console.log("Deploying InterimAdmin...");
   const interimAdmin = await ethers.deployContract("InterimAdmin", [
-    listaCore.address,
+    listaCore.target,
   ]);
-  await interimAdmin.deployed();
-  console.log("InterimAdmin deployed to:", interimAdmin.address);
+  await interimAdmin.waitForDeployment();
+  console.log("InterimAdmin deployed to:", interimAdmin.target);
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: interimAdmin.address,
-        constructorArguments: [listaCore.address],
+        address: interimAdmin.target,
+        constructorArguments: [listaCore.target],
       });
       break;
     } catch (e) {

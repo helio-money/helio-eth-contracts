@@ -1,4 +1,4 @@
-import { Contract } from "ethers";
+import { Contract, ZeroAddress } from "ethers";
 import hre, { ethers } from "hardhat";
 
 export const deployIncentiveVoting = async (
@@ -7,25 +7,25 @@ export const deployIncentiveVoting = async (
 ) => {
   console.log("Deploying IncentiveVoting...");
   const incentiveVoting = await ethers.deployContract("IncentiveVoting", [
-    listaCore.address,
-    tokenLocker.address,
-    ethers.constants.AddressZero, // vault
+    listaCore.target,
+    tokenLocker.target,
+    ZeroAddress
   ]);
-  await incentiveVoting.deployed();
-  console.log("IncentiveVoting deployed to:", incentiveVoting.address);
+  await incentiveVoting.waitForDeployment();
+  console.log("IncentiveVoting deployed to:", incentiveVoting.target);
 
   console.log("Updating IncentiveVoter in TokenLocker...");
-  await tokenLocker.setIncentiveVoter(incentiveVoting.address);
+  await tokenLocker.setIncentiveVoter(incentiveVoting.target);
   console.log("Updated IncentiveVoter in TokenLocker...");
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: incentiveVoting.address,
+        address: incentiveVoting.target,
         constructorArguments: [
-          listaCore.address,
-          tokenLocker.address,
-          ethers.constants.AddressZero,
+          listaCore.target,
+          tokenLocker.target,
+          ZeroAddress,
         ],
       });
       break;

@@ -38,9 +38,9 @@ export const deployMain = async () => {
   if (hre.network.name === "hardhat") {
     console.log("Deploying CollateralToken...");
     const collateralToken = await ethers.deployContract("CollateralToken", []);
-    await collateralToken.deployed();
-    console.log("CollateralToken deployed to:", collateralToken.address);
-    wBETH = collateralToken.address;
+    await collateralToken.waitForDeployment();
+    console.log("CollateralToken deployed to:", await collateralToken.getAddress());
+    wBETH = collateralToken.target;
   }
   const listaCore = await deployListaCore(owner);
   const priceFeed = await deployPriceFeed(listaCore);
@@ -91,24 +91,24 @@ export const deployMain = async () => {
 
   await deployNewInstance(factory, priceFeed, troveManager, sortedTroves, wBETH, borrowerOperations);
 
-  console.log("ListaCore:", listaCore.address);
-  console.log("PriceFeed:", priceFeed.address);
-  console.log("BorrowOperations:", borrowerOperations.address);
-  console.log("StabilityPool:", stabilityPool.address);
-  console.log("Factory:", factory.address);
-  console.log("LiquidationManager:", liquidationManager.address);
-  console.log("DebtToken:", debtToken.address);
-  console.log("TokenLocker:", tokenLocker.address);
-  console.log("IncentiveVoting:", incentiveVoting.address);
-  console.log("Vault:", vault.address);
-  console.log("ListaToken:", listaToken.address);
-  console.log("TroveManager:", troveManager.address);
-  console.log("SortedTroves:", sortedTroves.address);
-  console.log("InterimAdmin:", interimAdmin.address);
-  console.log("MultiTroveGetter:", multiTroveGetter.address);
-  console.log("TroveManagerGetters:", troveManagerGetter.address);
-  console.log("MultiCollateralHintHelpers:", multiCollateralHintHelpers.address);
-  console.log("FeeReceiver:", feeReceiver.address);
+  console.log("ListaCore:", listaCore.target);
+  console.log("PriceFeed:", priceFeed.target);
+  console.log("BorrowOperations:", borrowerOperations.target);
+  console.log("StabilityPool:", stabilityPool.target);
+  console.log("Factory:", factory.target);
+  console.log("LiquidationManager:", liquidationManager.target);
+  console.log("DebtToken:", debtToken.target);
+  console.log("TokenLocker:", tokenLocker.target);
+  console.log("IncentiveVoting:", incentiveVoting.target);
+  console.log("Vault:", vault.target);
+  console.log("ListaToken:", listaToken.target);
+  console.log("TroveManager:", troveManager.target);
+  console.log("SortedTroves:", sortedTroves.target);
+  console.log("InterimAdmin:", interimAdmin.target);
+  console.log("MultiTroveGetter:", multiTroveGetter.target);
+  console.log("TroveManagerGetters:", troveManagerGetter.target);
+  console.log("MultiCollateralHintHelpers:", multiCollateralHintHelpers.target);
+  console.log("FeeReceiver:", feeReceiver.target);
 
   if (hre.network.name === "hardhat") {
     await localTest(listaCore, borrowerOperations, stabilityPool, troveManager, priceFeed, sortedTroves, wBETH, liquidationManager, debtToken);

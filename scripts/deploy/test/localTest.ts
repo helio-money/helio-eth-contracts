@@ -1,7 +1,6 @@
-import { Contract } from "ethers";
+import { Contract, ZeroAddress } from "ethers";
 import hre, { ethers } from "hardhat";
-import { Signer } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { Signer, parseEther } from "ethers";
 import { expect } from "chai";
 
 
@@ -15,27 +14,26 @@ export const openTrove = async (troveManager: Contract, borrowerOperations: Cont
     }
 
     const collateralToken = await ethers.getContractAt("CollateralToken", wBETH);
-    await collateralToken.deployed();
+    await collateralToken.waitForDeployment();
     await collateralToken.mint(await signer.getAddress(), "2100000000000000000000000");
 
-    expect(await collateralToken.balanceOf(troveManager.address)).to.equal(0);
+    expect(await collateralToken.balanceOf(troveManager.target)).to.equal(0);
     expect(await collateralToken.balanceOf(await signer.getAddress())).to.equal("2100000000000000000000000");
-    await collateralToken.connect(signer).approve(borrowerOperations.address, parseEther("10000000000000"));
 
     try {
         const tx = await borrowerOperations.openTrove(
-            troveManager.address,
+            troveManager.target,
             await signer.getAddress(),
             0, // collAmount
             parseEther("0.33").toString(), // maxFeePercentage
             parseEther("100").toString(), // debtAmount
-            ethers.constants.AddressZero,
-            ethers.constants.AddressZero,
+            ZeroAddress,
+            ZeroAddress,
             {
               value: parseEther("1000"),
             }
         );
-        expect(await collateralToken.balanceOf(troveManager.address)).to.equal("1000000000000000000000");
+        expect(await collateralToken.balanceOf(troveManager.target)).to.equal("1000000000000000000000");
 
         console.log("openTrove done");
     } catch (e) {
@@ -54,15 +52,15 @@ export const adjustTrove = async (troveManager: Contract, borrowerOperations: Co
 
     try {
         const tx = await borrowerOperations.adjustTrove(
-            troveManager.address,
+            troveManager.target,
             await signer.getAddress(),
             parseEther("0.33").toString(), // maxFeePercentage
             0, // collDeposit
             0, // collWithdrawal
             parseEther("100").toString(), // debtChange
             true, // isDebtIncrease
-            ethers.constants.AddressZero,
-            ethers.constants.AddressZero,
+            ZeroAddress,
+            ZeroAddress,
             {
               value: parseEther("0.1"),
             }
@@ -84,11 +82,11 @@ export const repayDebt = async (borrowerOperations: Contract, troveManager: Cont
 
     try {
         const tx = await borrowerOperations.repayDebt(
-            troveManager.address,
+            troveManager.target,
             await signer.getAddress(),
             parseEther("100").toString(),
-            ethers.constants.AddressZero,
-            ethers.constants.AddressZero,
+            ZeroAddress,
+            ZeroAddress,
         );
         console.log("Repay debt done...", tx.hash);
     } catch (e) {
@@ -105,7 +103,7 @@ export const closeTrove = async (borrowerOperations: Contract, troveManager: Con
         throw Error("Unsupported network");
     }
     const collateralToken = await ethers.getContractAt("CollateralToken", wBETH);
-    await collateralToken.deployed();
+    await collateralToken.waitForDeployment();
     expect(await collateralToken.balanceOf(await signer.getAddress())).to.equal("2098999800000000000000000");
 
 
@@ -113,7 +111,7 @@ export const closeTrove = async (borrowerOperations: Contract, troveManager: Con
 
     try {
         const tx = await borrowerOperations.closeTrove(
-            troveManager.address,
+            troveManager.target,
             await signer.getAddress(),
         );
         console.log("Close trove done...", tx.hash);
