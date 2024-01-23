@@ -67,3 +67,9 @@ Open coverage report in browser: `coverage/index.html`
 ```
 npx hardhat run scripts/deploy.ts --network hardhat
 ```
+
+## Upgrade contract
+Run the below command and provide information per instruction:
+```
+npx hardhat run scripts/upgrade/index.ts --network sepolia
+```
