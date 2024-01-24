@@ -5,7 +5,6 @@ pragma solidity 0.8.19;
 import "../interfaces/IIncentiveVoting.sol";
 import "../interfaces/IVault.sol";
 import "../dependencies/ListaOwnable.sol";
-import "../dependencies/SystemStart.sol";
 
 /**
     @title Lista Emission Schedule
@@ -14,9 +13,11 @@ import "../dependencies/SystemStart.sol";
             reward rate will decay to dust as it approaches the maximum supply,
             but should not reach zero for a Very Long Time.
  */
-contract EmissionSchedule is ListaOwnable, SystemStart {
+contract EmissionSchedule is ListaOwnable {
     event WeeklyPctScheduleSet(uint64[2][] schedule);
     event LockParametersSet(uint256 lockWeeks, uint256 lockDecayWeeks);
+
+    uint256 immutable startTime;
 
     // number representing 100% in `weeklyPct`
     uint256 constant MAX_PCT = 10000;
@@ -45,7 +46,8 @@ contract EmissionSchedule is ListaOwnable, SystemStart {
         uint64 _lockDecayWeeks,
         uint64 _weeklyPct,
         uint64[2][] memory _scheduledWeeklyPct
-    ) ListaOwnable(_listaCore) SystemStart(_listaCore) {
+    ) ListaOwnable(_listaCore) {
+        startTime = IListaCore(_listaCore).startTime();
         voter = _voter;
         vault = _vault;
 
@@ -155,5 +157,9 @@ contract EmissionSchedule is ListaOwnable, SystemStart {
         }
         scheduledWeeklyPct = _scheduledWeeklyPct;
         emit WeeklyPctScheduleSet(_scheduledWeeklyPct);
+    }
+
+    function getWeek() public view returns (uint256 week) {
+        return (block.timestamp - startTime) / 1 weeks;
     }
 }

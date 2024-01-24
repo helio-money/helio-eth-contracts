@@ -36,10 +36,10 @@ import "../dependencies/ListaBase.sol";
                the value of the debt is distributed between stability pool depositors. The remaining
                collateral is left claimable by the trove owner.
  */
-contract LiquidationManager is ListaBase {
-    IStabilityPool public immutable stabilityPool;
-    IBorrowerOperations public immutable borrowerOperations;
-    address public immutable factory;
+contract LiquidationManager is Initializable, ListaBase {
+    IStabilityPool public stabilityPool;
+    IBorrowerOperations public borrowerOperations;
+    address public factory;
 
     uint256 private constant _100pct = 1000000000000000000; // 1e18 == 100%
 
@@ -97,12 +97,18 @@ contract LiquidationManager is ListaBase {
         redeemCollateral
     }
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         IStabilityPool _stabilityPoolAddress,
         IBorrowerOperations _borrowerOperations,
         address _factory,
         uint256 _gasCompensation
-    ) ListaBase(_gasCompensation) {
+    ) public initializer {
+        __ListaBase_init(_gasCompensation);
         stabilityPool = _stabilityPoolAddress;
         borrowerOperations = _borrowerOperations;
         factory = _factory;

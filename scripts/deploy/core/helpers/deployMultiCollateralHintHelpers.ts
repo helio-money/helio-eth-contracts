@@ -7,18 +7,18 @@ const params = DEPLOYMENT_PARAMS[11155111];
 export const deployMultiCollateralHintHelpers = async (borrowerOperations: Contract) => {
   console.log("Deploying MultiCollateralHintHelpers...");
   const multiCollateralHintHelpers = await ethers.deployContract("MultiCollateralHintHelpers", [
-    borrowerOperations.address,
+    borrowerOperations.target,
     params.gasCompensation,
   ]);
-  await multiCollateralHintHelpers.deployed();
-  console.log("MultiCollateralHintHelpers deployed to:", multiCollateralHintHelpers.address);
+  await multiCollateralHintHelpers.waitForDeployment();
+  console.log("MultiCollateralHintHelpers deployed to:", multiCollateralHintHelpers.target);
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: multiCollateralHintHelpers.address,
+        address: multiCollateralHintHelpers.target,
         constructorArguments: [
-          borrowerOperations.address,
+          borrowerOperations.target,
           params.gasCompensation,
         ],
       });

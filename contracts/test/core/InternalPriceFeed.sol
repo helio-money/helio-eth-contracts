@@ -7,7 +7,9 @@ contract InternalPriceFeed is PriceFeed {
     constructor(
         address listaCore,
         address ethFeed
-    ) PriceFeed(listaCore, ethFeed) {}
+    ) {
+        PriceFeed.initialize(listaCore, ethFeed);
+    }
 
     function processFeedResponses(
         address _token,

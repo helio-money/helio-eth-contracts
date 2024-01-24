@@ -17,9 +17,10 @@ import { deployListaToken } from "./dao/deployListaToken";
 import { deployTokenLocker } from "./dao/deployTokenLocker";
 import { deployVault } from "./dao/deployVault";
 import { deployFeeReceiver } from "./dao/deployFeeReceiver";
-import { deployCollateralToken } from "./test/deployCollateralToken";
 import { Contract, Signer } from "ethers";
-
+import { openTrove, depositToSP, adjustTrove, repayDebt, closeTrove } from "./test/localTest";
+import { DEPLOYMENT_PARAMS } from "../../constants/index"
+import { upgradeCore } from "./test/upgradeCore";
 
 export const deployMain = async () => {
   let owner: Signer;
@@ -33,21 +34,33 @@ export const deployMain = async () => {
     throw Error("Unsupported network");
   }
 
-  //  const collateralToken = await deployCollateralToken(); // Test Collateral, use existing wBETH on sepolia
+  let wBETH = DEPLOYMENT_PARAMS[11155111].wBETH;
+  if (hre.network.name === "hardhat") {
+    console.log("Deploying CollateralToken...");
+    const collateralToken = await ethers.deployContract("CollateralToken", []);
+    await collateralToken.waitForDeployment();
+    console.log("CollateralToken deployed to:", await collateralToken.getAddress());
+    wBETH = collateralToken.target;
+  }
   const listaCore = await deployListaCore(owner);
   const priceFeed = await deployPriceFeed(listaCore);
-  const borrowerOperations = await deployBorrowerOperations(listaCore);
+
+  const borrowerOperations = await deployBorrowerOperations(listaCore, wBETH);
+
   const stabilityPool = await deployStabilityPool(listaCore);
+
   const factory = await deployFactory(
     listaCore,
     stabilityPool,
     borrowerOperations
   );
+
   const liquidationManager = await deployLiquidationManager(
     stabilityPool,
     borrowerOperations,
     factory
   );
+
   const debtToken = await deployDebtToken(
     listaCore,
     stabilityPool,
@@ -68,31 +81,53 @@ export const deployMain = async () => {
     debtToken,
     borrowerOperations,
     liquidationManager,
-    vault
+    vault,
+    factory,
   );
-  const sortedTroves = await deploySortedTroves();
+  const sortedTroves = await deploySortedTroves(factory);
   const multiTroveGetter = await deployMultiTroveGetter();
   const troveManagerGetter = await deployTroveManagerGetters(factory);
   const multiCollateralHintHelpers = await deployMultiCollateralHintHelpers(borrowerOperations);
 
-  deployNewInstance(factory, priceFeed, troveManager, sortedTroves);
+  await deployNewInstance(factory, priceFeed, troveManager, sortedTroves, wBETH, borrowerOperations);
 
-  console.log("ListaCore:", listaCore.address);
-  console.log("PriceFeed:", priceFeed.address);
-  console.log("BorrowOperations:", borrowerOperations.address);
-  console.log("StabilityPool:", stabilityPool.address);
-  console.log("Factory:", factory.address);
-  console.log("LiquidationManager:", liquidationManager.address);
-  console.log("DebtToken:", debtToken.address);
-  console.log("TokenLocker:", tokenLocker.address);
-  console.log("IncentiveVoting:", incentiveVoting.address);
-  console.log("Vault:", vault.address);
-  console.log("ListaToken:", listaToken.address);
-  console.log("TroveManager:", troveManager.address);
-  console.log("SortedTroves:", sortedTroves.address);
-  console.log("InterimAdmin:", interimAdmin.address);
-  console.log("MultiTroveGetter:", multiTroveGetter.address);
-  console.log("TroveManagerGetters:", troveManagerGetter.address);
-  console.log("MultiCollateralHintHelpers:", multiCollateralHintHelpers.address);
-  console.log("FeeReceiver:", feeReceiver.address);
+  console.log("ListaCore:", listaCore.target);
+  console.log("PriceFeed:", priceFeed.target);
+  console.log("BorrowOperations:", borrowerOperations.target);
+  console.log("StabilityPool:", stabilityPool.target);
+  console.log("Factory:", factory.target);
+  console.log("LiquidationManager:", liquidationManager.target);
+  console.log("DebtToken:", debtToken.target);
+  console.log("TokenLocker:", tokenLocker.target);
+  console.log("IncentiveVoting:", incentiveVoting.target);
+  console.log("Vault:", vault.target);
+  console.log("ListaToken:", listaToken.target);
+  console.log("TroveManager:", troveManager.target);
+  console.log("SortedTroves:", sortedTroves.target);
+  console.log("InterimAdmin:", interimAdmin.target);
+  console.log("MultiTroveGetter:", multiTroveGetter.target);
+  console.log("TroveManagerGetters:", troveManagerGetter.target);
+  console.log("MultiCollateralHintHelpers:", multiCollateralHintHelpers.target);
+  console.log("FeeReceiver:", feeReceiver.target);
+
+  if (hre.network.name === "hardhat") {
+    await localTest(listaCore, borrowerOperations, stabilityPool, troveManager, priceFeed, sortedTroves, wBETH, liquidationManager, debtToken);
+  }
+}
+
+const localTest = async (listaCore: Contract, borrowerOperations: Contract, stabilityPool: Contract, troveManager: Contract, priceFeed: Contract, sortedTroves: Contract, wBETH: string, liquidationManager: Contract, debtToken: Contract) => {
+  console.log("Running local test...");
+  await openTrove(troveManager, borrowerOperations, wBETH);
+  await adjustTrove(troveManager, borrowerOperations);
+  await repayDebt(borrowerOperations, troveManager);
+  await depositToSP(stabilityPool);
+
+  await upgradeCore(borrowerOperations, troveManager, liquidationManager, stabilityPool, priceFeed, sortedTroves);
+
+  await adjustTrove(troveManager, borrowerOperations);
+  await repayDebt(borrowerOperations, troveManager);
+//  await closeTrove(borrowerOperations, troveManager, wBETH, debtToken);
+  await depositToSP(stabilityPool);
+
+  console.log("Local test done");
 }

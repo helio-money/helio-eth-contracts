@@ -15,7 +15,8 @@ contract MultiCollateralHintHelpers is ListaBase {
     constructor(
         address _borrowerOperationsAddress,
         uint256 _gasCompensation
-    ) ListaBase(_gasCompensation) {
+    ) {
+        __ListaBase_init(_gasCompensation);
         borrowerOperations = IBorrowerOperations(_borrowerOperationsAddress);
     }
 

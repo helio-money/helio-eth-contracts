@@ -9,9 +9,8 @@ import "../interfaces/ITroveManager.sol";
 import "../interfaces/IDebtToken.sol";
 import "../dependencies/ListaBase.sol";
 import "../dependencies/ListaMath.sol";
-import "../dependencies/ListaOwnable.sol";
+import "../dependencies/InitializeListaOwnable.sol";
 import "../dependencies/DelegatedOps.sol";
-
 /**
     @title Lista Borrower Operations
     @notice Based on Liquity's `BorrowerOperations`
@@ -20,12 +19,12 @@ import "../dependencies/DelegatedOps.sol";
             Lista's implementation is modified to support multiple collaterals. There is a 1:n
             relationship between `BorrowerOperations` and each `TroveManager` / `SortedTroves` pair.
  */
-contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
+contract BorrowerOperations is ListaBase, InitializeListaOwnable, DelegatedOps {
     using SafeERC20 for IERC20;
 
     uint256 public constant WBETH_EXCHANGE_RATE_UNIT = 1e18;
 
-    IwBETH public immutable wBETH;
+    IwBETH public wBETH;
     address public referral; // referral address for wBETH deposit
 
     IDebtToken public debtToken;
@@ -94,7 +93,12 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
     );
     event TroveManagerRemoved(ITroveManager troveManager);
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _listaCore,
         address _wBETH,
         address _referral,
@@ -102,7 +106,10 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         address _factory,
         uint256 _minNetDebt,
         uint256 _gasCompensation
-    ) ListaOwnable(_listaCore) ListaBase(_gasCompensation) {
+    ) public initializer {
+        __ListaOwnable_init(_listaCore);
+        __ListaBase_init(_gasCompensation);
+
         wBETH = IwBETH(_wBETH);
         setFactory(_factory);
         setReferral(_referral);
@@ -314,7 +321,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
         );
 
         // Move the collateral to the Trove Manager - collateral will be wBETH if msg.value > 0
-        collateralToken.safeTransferFrom(msg.sender, address(troveManager), _collateralAmount);
+        collateralToken.safeTransfer(address(troveManager), _collateralAmount);
 
         //  and mint the DebtAmount to the caller and gas compensation for Gas Pool
         debtToken.mintWithGasCompensation(msg.sender, _debtAmount);
@@ -536,8 +543,7 @@ contract BorrowerOperations is ListaBase, ListaOwnable, DelegatedOps {
 
         // If we are increasing collateral, send tokens to the trove manager prior to adjusting the trove
         if (vars.isCollIncrease)
-            collateralToken.safeTransferFrom(
-                msg.sender,
+            collateralToken.safeTransfer(
                 address(troveManager),
                 vars.collChange
             );

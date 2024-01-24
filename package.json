@@ -29,7 +29,11 @@
   "license": "ISC",
   "dependencies": {
     "@layerzerolabs/solidity-examples": "git+https://github.com/LayerZero-Labs/solidity-examples.git#3d3a09f14a1d05479a5a397d5f646fe3a455c00c",
-    "@openzeppelin/contracts": "4.8.0"
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@openzeppelin/contracts": "4.8.0",
+    "@openzeppelin/hardhat-upgrades": "^3.0.2",
+    "inquirer": "^8.0.0"
   },
   "devDependencies": {
     "@defi-wonderland/smock": "^2.3.4",

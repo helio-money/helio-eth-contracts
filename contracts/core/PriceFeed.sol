@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import "../interfaces/IAggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../dependencies/ListaMath.sol";
-import "../dependencies/ListaOwnable.sol";
+import "../dependencies/InitializeListaOwnable.sol";
 
 /**
     @title Lista Multi Token Price Feed
@@ -13,7 +13,7 @@ import "../dependencies/ListaOwnable.sol";
 
             Lista's implementation additionally caches price values within a block and incorporates exchange rate settings for derivative tokens (e.g. stETH -> wstETH).
  */
-contract PriceFeed is ListaOwnable {
+contract PriceFeed is InitializeListaOwnable {
     struct OracleRecord {
         IAggregatorV3Interface chainLinkOracle;
         uint8 decimals;
@@ -71,7 +71,13 @@ contract PriceFeed is ListaOwnable {
     mapping(address => OracleRecord) public oracleRecords;
     mapping(address => PriceRecord) public priceRecords;
 
-    constructor(address _listaCore, address ethFeed) ListaOwnable(_listaCore) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _listaCore, address ethFeed) public initializer {
+        __ListaOwnable_init(_listaCore);
         setOracle(address(0), ethFeed, 3600, 0, 0, false);
     }
 

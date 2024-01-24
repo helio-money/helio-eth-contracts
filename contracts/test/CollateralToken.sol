@@ -14,4 +14,10 @@ contract CollateralToken is ERC20 {
     function exchangeRate() external pure returns (uint256) {
         return 1e18;
     }
+
+    function deposit(address referral) external payable {
+        require(msg.value > 0, "zero ETH amount");
+        _mint(msg.sender, msg.value);
+    }
+
 }

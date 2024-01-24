@@ -1,5 +1,5 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
-import { Contract } from "ethers";
+import { Contract, ZeroAddress } from "ethers";
 import hre, { ethers } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
@@ -12,27 +12,27 @@ export const deployVault = async (
 ) => {
   console.log("Deploying ListaVault...");
   const vault = await ethers.deployContract("ListaVault", [
-    listaCore.address,
-    ethers.constants.AddressZero,
-    tokenLocker.address,
-    incentiveVoting.address,
-    stabilityPool.address,
+    listaCore.target,
+    ZeroAddress,
+    tokenLocker.target,
+    incentiveVoting.target,
+    stabilityPool.target,
     params.manager,
   ]);
-  await vault.deployed();
-  console.log("ListaVault deployed to:", vault.address);
+  await vault.waitForDeployment();
+  console.log("ListaVault deployed to:", vault.target);
 
   console.log("Updating ListaVault in StabilityPool...");
-  await stabilityPool.setVault(vault.address);
+  await stabilityPool.setVault(vault.target);
   console.log("Updated ListaVault in StabilityPool...");
 
   console.log("Updating ListaVault in IncentiveVoting...");
-  await incentiveVoting.setVault(vault.address);
+  await incentiveVoting.setVault(vault.target);
   console.log("Updated ListaVault in IncentiveVoting...");
 
   while (true) {
     const updatedVaultAddress = await incentiveVoting.vault();
-    if (updatedVaultAddress === vault.address) {
+    if (updatedVaultAddress === vault.target) {
       console.log("Registering new receiver in Vault...");
       await vault.registerNewReceiver();
       console.log("Registered new receiver in Vault...");
@@ -43,13 +43,13 @@ export const deployVault = async (
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: vault.address,
+        address: vault.target,
         constructorArguments: [
-          listaCore.address,
-          ethers.constants.AddressZero,
-          tokenLocker.address,
-          incentiveVoting.address,
-          stabilityPool.address,
+          listaCore.target,
+          ZeroAddress,
+          tokenLocker.target,
+          incentiveVoting.target,
+          stabilityPool.target,
           params.manager,
         ],
       });

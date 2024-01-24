@@ -1,35 +1,37 @@
+import { deployCollateralToken } from "../test/deployCollateralToken";
 import { DEPLOYMENT_PARAMS } from "../../../constants";
-import { Contract, Signer } from "ethers";
-import hre, { ethers } from "hardhat";
-import { ZERO_ADDRESS } from "../../../test/ts/utils";
+import { Contract, Signer, ZeroAddress } from "ethers";
+import hre, { ethers, upgrades } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
-export const deployBorrowerOperations = async (listaCore: Contract) => {
+export const deployBorrowerOperations = async (listaCore: Contract, wBETH: string) => {
   console.log("Deploying BorrowerOperations...");
-  const borrowerOperations = await ethers.deployContract("BorrowerOperations", [
-    listaCore.address,
-    params.wBETH, // wbeth
+
+  const BorrowerOperations = await ethers.getContractFactory("BorrowerOperations");
+  const borrowerOperations = await upgrades.deployProxy(BorrowerOperations, [
+    listaCore.target,
+    wBETH, // wbeth
     params.referral, // referral
-    ZERO_ADDRESS, //debtToken.address
-    ZERO_ADDRESS, // factory
+    ZeroAddress, //debtToken.address
+    ZeroAddress, // factory
     params.minNetDebt, // minNetDebt
     params.gasCompensation, // gasCompensation
   ]);
-  await borrowerOperations.deployed();
-  console.log("BorrowerOperations deployed to:", borrowerOperations.address);
+
+  console.log("BorrowerOperations deployed to:", borrowerOperations.target);
 
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: borrowerOperations.address,
+        address: borrowerOperations.target,
         constructorArguments: [
-          listaCore.address,
+          listaCore.target,
           params.wBETH, // wbeth
           params.referral, // referral
-          ZERO_ADDRESS, //debtToken.address
-          ZERO_ADDRESS, // factory
+          ZeroAddress, //debtToken.address
+          ZeroAddress, // factory
           params.minNetDebt, // minNetDebt
           params.gasCompensation, // gasCompensation
         ],
@@ -39,5 +41,6 @@ export const deployBorrowerOperations = async (listaCore: Contract) => {
       console.log("retrying...", e);
     }
   }
+
   return borrowerOperations;
 };

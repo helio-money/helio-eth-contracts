@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.19;
 
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../interfaces/ITroveManager.sol";
 
 /**
@@ -12,7 +13,8 @@ import "../interfaces/ITroveManager.sol";
             Originally derived from `SortedDoublyLinkedList`:
             https://github.com/livepeer/protocol/blob/master/contracts/libraries/SortedDoublyLL.sol
  */
-contract SortedTroves {
+contract SortedTroves is Initializable {
+    address public factory;
     ITroveManager public troveManager;
 
     Data public data;
@@ -35,7 +37,17 @@ contract SortedTroves {
     event NodeAdded(address _id, uint256 _NICR);
     event NodeRemoved(address _id);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _factory) external initializer {
+        factory = _factory;
+    }
+
     function setAddresses(address _troveManagerAddress) external {
+        require(msg.sender == factory, "Only factory");
         require(address(troveManager) == address(0), "Already set");
         troveManager = ITroveManager(_troveManagerAddress);
     }

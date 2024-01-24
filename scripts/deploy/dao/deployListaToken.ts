@@ -10,25 +10,25 @@ export const deployListaToken = async (
 ) => {
     console.log("Deploying ListaToken...");
     const listaToken = await ethers.deployContract("ListaToken", [
-        vault.address,
+        vault.target,
         params.lzEndpoint,
-        tokenLocker.address,
+        tokenLocker.target,
     ]);
-    await listaToken.deployed();
-    console.log("ListaToken deployed to:", listaToken.address);
+    await listaToken.waitForDeployment();
+    console.log("ListaToken deployed to:", listaToken.target);
 
     console.log("Updating LockToken in TokenLocker...");
-    await tokenLocker.setLockToken(listaToken.address);
+    await tokenLocker.setLockToken(listaToken.target);
     console.log("Updated LockToken in TokenLocker...");
 
     while (hre.network.name !== "hardhat") {
         try {
             await hre.run("verify:verify", {
-                address: listaToken.address,
+                address: listaToken.target,
                 constructorArguments: [
-                    vault.address,
+                    vault.target,
                     params.lzEndpoint,
-                    tokenLocker.address,
+                    tokenLocker.target,
                 ],
             });
             break;

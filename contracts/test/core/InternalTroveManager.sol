@@ -16,19 +16,13 @@ contract InternalTroveManager is TroveManager {
         address _debtTokenAddress,
         address _borrowerOperationsAddress,
         address _vault,
+        address _factory,
         address _liquidationManager,
         uint256 _gasCompensation
     )
-        TroveManager(
-            _listaCore,
-            _gasPoolAddress,
-            _debtTokenAddress,
-            _borrowerOperationsAddress,
-            _vault,
-            _liquidationManager,
-            _gasCompensation
-        )
-    {}
+    {
+        TroveManager.initialize(_listaCore, _gasPoolAddress, _debtTokenAddress, _borrowerOperationsAddress, _vault, _factory, _liquidationManager, _gasCompensation);
+    }
 
     function setLastUpdate(uint32 value) public {
         lastUpdate = value;

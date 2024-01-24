@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../dependencies/ListaOwnable.sol";
+import "../dependencies/InitializeListaOwnable.sol";
 import "../dependencies/SystemStart.sol";
 import "../dependencies/ListaMath.sol";
 import "../interfaces/IDebtToken.sol";
@@ -18,7 +18,7 @@ import "../interfaces/IVault.sol";
             Lista's implementation is modified to support multiple collaterals. Deposits into
             the stability pool may be used to liquidate any supported collateral type.
  */
-contract StabilityPool is ListaOwnable, SystemStart {
+contract StabilityPool is InitializeListaOwnable, SystemStart {
     using SafeERC20 for IERC20;
 
     uint256 public constant DECIMAL_PRECISION = 1e18;
@@ -57,9 +57,9 @@ contract StabilityPool is ListaOwnable, SystemStart {
      * after a series of liquidations have occurred, each of which cancel some debt with the deposit.
      *
      * During its lifetime, a deposit's value evolves from d_t to d_t * P / P_t , where P_t
-     * is the snapshot of P taken at the instant the deposit was made. 18-digit decimal.
+     * is the snapshot of P taken at the instant the deposit was made. 18-digit decimal. Initialized to 1e18.
      */
-    uint256 public P = DECIMAL_PRECISION;
+    uint256 public P;
 
     uint256 public constant SCALE_FACTOR = 1e9;
 
@@ -148,18 +148,27 @@ contract StabilityPool is ListaOwnable, SystemStart {
         uint256 claimed
     );
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _listaCore,
         IDebtToken _debtTokenAddress,
         IListaVault _vault,
         address _factory,
         address _liquidationManager
-    ) ListaOwnable(_listaCore) SystemStart(_listaCore) {
+    ) public initializer {
+        __ListaOwnable_init(_listaCore);
+        __SystemStart_init(_listaCore);
+
         setDebtToken(_debtTokenAddress);
         setVault(_vault);
         setFactory(_factory);
         setLiquidationManager(_liquidationManager);
         periodFinish = uint32(block.timestamp - 1);
+        P = DECIMAL_PRECISION;
     }
 
     function setDebtToken(IDebtToken _debtTokenAddress) public onlyOwner {

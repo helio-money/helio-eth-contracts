@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract } from "ethers";
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -10,33 +10,34 @@ export const deployLiquidationManager = async (
   factory: Contract
 ) => {
   console.log("Deploying LiquidationManager...");
-  const liquidationManager = await ethers.deployContract("LiquidationManager", [
-    stabilityPool.address,
-    borrowerOperations.address,
-    factory.address,
+  const LiquidationManager = await ethers.getContractFactory("LiquidationManager");
+  const liquidationManager = await upgrades.deployProxy(LiquidationManager, [
+    stabilityPool.target,
+    borrowerOperations.target,
+    factory.target,
     params.gasCompensation,
   ]);
-  await liquidationManager.deployed();
+
   console.log(
-    "LiquidationManager deployed to:", liquidationManager.address
+    "LiquidationManager deployed to:", liquidationManager.target
   );
 
   console.log("Updating liquidationManager in StabilityPool...");
-  await stabilityPool.setLiquidationManager(liquidationManager.address);
+  await stabilityPool.setLiquidationManager(liquidationManager.target);
   console.log("Updated liquidationManager in StabilityPool...");
 
   console.log("Updating liquidationManager in Factory...");
-  await factory.setLiquidationManager(liquidationManager.address);
+  await factory.setLiquidationManager(liquidationManager.target);
   console.log("Updated liquidationManager in Factory...");
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: liquidationManager.address,
+        address: liquidationManager.target,
         constructorArguments: [
-          stabilityPool.address,
-          borrowerOperations.address,
-          factory.address,
+          stabilityPool.target,
+          borrowerOperations.target,
+          factory.target,
           params.gasCompensation,
         ],
       });

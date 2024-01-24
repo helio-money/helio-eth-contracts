@@ -1,31 +1,28 @@
-import { Contract } from "ethers";
-import hre, { ethers } from "hardhat";
-import { DEPLOYMENT_PARAMS } from "../../../constants";
-
-const params = DEPLOYMENT_PARAMS[11155111];
+import { Contract, ZeroAddress } from "ethers";
+import hre, { ethers, upgrades } from "hardhat";
 
 export const deployStabilityPool = async (listaCore: Contract) => {
   console.log("Deploying StabilityPool...");
-  const stabilityPool = await ethers.deployContract("StabilityPool", [
-    listaCore.address,
-    ethers.constants.AddressZero, // debtToken
-    ethers.constants.AddressZero, // vault,
-    ethers.constants.AddressZero, // factory
-    ethers.constants.AddressZero, // liquidationManager
+  const StabilityPool = await ethers.getContractFactory("StabilityPool");
+  const stabilityPool = await upgrades.deployProxy(StabilityPool, [
+    listaCore.target,
+    ZeroAddress, // debtToken
+    ZeroAddress, // vault,
+    ZeroAddress, // factory
+    ZeroAddress, // liquidationManager
   ]);
-  await stabilityPool.deployed();
-  console.log("StabilityPool deployed to:", stabilityPool.address);
+  console.log("StabilityPool deployed to:", stabilityPool.target);
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: stabilityPool.address,
+        address: stabilityPool.target,
         constructorArguments: [
-          listaCore.address,
-          ethers.constants.AddressZero, // debtToken
-          ethers.constants.AddressZero, // vault,
-          ethers.constants.AddressZero, // factory
-          ethers.constants.AddressZero, // liquidationManager
+          listaCore.target,
+          ZeroAddress, // debtToken
+          ZeroAddress, // vault,
+          ZeroAddress, // factory
+          ZeroAddress, // liquidationManager
         ],
       });
       break;
@@ -36,8 +33,3 @@ export const deployStabilityPool = async (listaCore: Contract) => {
 
   return stabilityPool;
 };
-
-export const depositToSP = async (stabilityPool: Contract) => {
-  await stabilityPool.provideToSP(100);
-  console.log("Deposited 100 lisUSD to StabilityPool");
-}

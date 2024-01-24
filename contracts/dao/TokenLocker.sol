@@ -3,7 +3,6 @@
 pragma solidity 0.8.19;
 
 import "../dependencies/ListaOwnable.sol";
-import "../dependencies/SystemStart.sol";
 import "../interfaces/IListaCore.sol";
 import "../interfaces/IIncentiveVoting.sol";
 import "../interfaces/IListaToken.sol";
@@ -14,7 +13,9 @@ import "../interfaces/IListaToken.sol";
             which is used within `AdminVoting` and `IncentiveVoting` to vote on
             core protocol operations.
  */
-contract TokenLocker is ListaOwnable, SystemStart {
+contract TokenLocker is ListaOwnable {
+    uint256 immutable startTime;
+
     // The maximum number of weeks that tokens may be locked for. Also determines the maximum
     // number of active locks that a single account may open. Weight is calculated as:
     // `[balance] * [weeks to unlock]`. Weights are stored as `uint40` and balances as `uint32`,
@@ -111,7 +112,9 @@ contract TokenLocker is ListaOwnable, SystemStart {
         IIncentiveVoting _voter,
         address _manager,
         uint256 _lockToTokenRatio
-    ) SystemStart(_listaCore) ListaOwnable(_listaCore) {
+    ) ListaOwnable(_listaCore) {
+        startTime = IListaCore(_listaCore).startTime();
+
         setLockToken(_token);
         setIncentiveVoter(_voter);
         listaCore = IListaCore(_listaCore);
@@ -1067,5 +1070,9 @@ contract TokenLocker is ListaOwnable, SystemStart {
         accountData.locked = uint32(locked);
         accountData.week = uint16(accountWeek);
         return weight;
+    }
+
+    function getWeek() public view returns (uint256 week) {
+        return (block.timestamp - startTime) / 1 weeks;
     }
 }

@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/proxy/Clones.sol";
 import "../dependencies/ListaOwnable.sol";
 import "../interfaces/ITroveManager.sol";
 import "../interfaces/IBorrowerOperations.sol";
@@ -13,21 +12,15 @@ import "../interfaces/ILiquidationManager.sol";
 
 /**
     @title Lista Trove Factory
-    @notice Deploys cloned pairs of `TroveManager` and `SortedTroves` in order to
+    @notice Configure pairs of `TroveManager` and `SortedTroves` in order to
             add new collateral types within the system.
  */
 contract Factory is ListaOwnable {
-    using Clones for address;
-
     // fixed single-deployment contracts
     IDebtToken public debtToken;
     IStabilityPool public stabilityPool;
     ILiquidationManager public liquidationManager;
     IBorrowerOperations public borrowerOperations;
-
-    // implementation contracts, redeployed each time via clone proxy
-    address public sortedTrovesImpl;
-    address public troveManagerImpl;
 
     address[] public troveManagers;
 
@@ -55,17 +48,12 @@ contract Factory is ListaOwnable {
         IDebtToken _debtToken,
         IStabilityPool _stabilityPool,
         IBorrowerOperations _borrowerOperations,
-        address _sortedTroves,
-        address _troveManager,
         ILiquidationManager _liquidationManager
     ) ListaOwnable(_listaCore) {
         setDebtToken(_debtToken);
         setStabilityPool(_stabilityPool);
         setBorrowerOperations(_borrowerOperations);
         setLiquidationManager(_liquidationManager);
-
-        sortedTrovesImpl = _sortedTroves;
-        troveManagerImpl = _troveManager;
     }
 
     function setDebtToken(IDebtToken _debtTokenAddress) public onlyOwner {
@@ -101,33 +89,18 @@ contract Factory is ListaOwnable {
                to enable LISTA emissions on the newly deployed `TroveManager`
         @param collateral Collateral token to use in new deployment
         @param priceFeed Custom `PriceFeed` deployment. Leave as `address(0)` to use the default.
-        @param customTroveManagerImpl Custom `TroveManager` implementation to clone from.
-                                      Leave as `address(0)` to use the default.
-        @param customSortedTrovesImpl Custom `SortedTroves` implementation to clone from.
-                                      Leave as `address(0)` to use the default.
+        @param troveManager Address of `TroveManager` proxy.
+        @param sortedTroves Address of `SortedTroves` proxy.
         @param params Struct of initial parameters to be set on the new trove manager
      */
     function deployNewInstance(
         address collateral,
         address priceFeed,
-        address customTroveManagerImpl,
-        address customSortedTrovesImpl,
+        address troveManager,
+        address sortedTroves,
         DeploymentParams memory params
     ) external onlyOwner {
-        address implementation = customTroveManagerImpl == address(0)
-            ? troveManagerImpl
-            : customTroveManagerImpl;
-        address troveManager = implementation.cloneDeterministic(
-            bytes32(bytes20(collateral))
-        );
         troveManagers.push(troveManager);
-
-        implementation = customSortedTrovesImpl == address(0)
-            ? sortedTrovesImpl
-            : customSortedTrovesImpl;
-        address sortedTroves = implementation.cloneDeterministic(
-            bytes32(bytes20(troveManager))
-        );
 
         ITroveManager(troveManager).setAddresses(
             priceFeed,
@@ -156,13 +129,5 @@ contract Factory is ListaOwnable {
         );
 
         emit NewDeployment(collateral, priceFeed, troveManager, sortedTroves);
-    }
-
-    function setImplementations(
-        address _troveManagerImpl,
-        address _sortedTrovesImpl
-    ) external onlyOwner {
-        troveManagerImpl = _troveManagerImpl;
-        sortedTrovesImpl = _sortedTrovesImpl;
     }
 }

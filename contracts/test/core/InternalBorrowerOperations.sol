@@ -14,16 +14,9 @@ contract InternalBorrowerOperations is BorrowerOperations {
         uint256 _minNetDebt,
         uint256 _gasCompensation
     )
-        BorrowerOperations(
-            _listaCore,
-            _wBETH,
-            _referral,
-            _debtTokenAddress,
-            _factory,
-            _minNetDebt,
-            _gasCompensation
-        )
-    {}
+    {
+        BorrowerOperations.initialize(_listaCore, _wBETH, _referral, _debtTokenAddress, _factory, _minNetDebt, _gasCompensation);
+    }
 
     function getTroveManagersLength() public view returns (uint256) {
         return _troveManagers.length;

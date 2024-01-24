@@ -62,3 +62,14 @@ Open coverage report in browser: `coverage/index.html`
 
 1. Add `SEPOLIA_DEPLOYER_KEY` to `.env` file and make sure other environment variables are valid
 2. Run `npx hardhat run scripts/deploy.ts --network sepolia`, which will deploy and verify Lista contracts on Sepolia
+
+## Local deployment and initialization
+```
+npx hardhat run scripts/deploy.ts --network hardhat
+```
+
+## Upgrade contract
+Run the below command and provide information per instruction:
+```
+npx hardhat run scripts/upgrade/index.ts --network sepolia
+```

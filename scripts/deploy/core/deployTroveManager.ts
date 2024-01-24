@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import { Contract, Signer } from "ethers";
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -10,31 +10,35 @@ export const deployTroveManager = async (
   borrowOperations: Contract,
   liquidationManager: Contract,
   vault: Contract,
+  factory: Contract
 ) => {
   console.log("Deploying TroveManager...");
-  const troveManager = await ethers.deployContract("TroveManager", [
-    listaCore.address,
+  const TroveManager = await ethers.getContractFactory("TroveManager");
+  const troveManager = await upgrades.deployProxy(TroveManager, [
+    listaCore.target,
     params.gasPool,
-    debtToken.address,
-    borrowOperations.address,
-    vault.address,
-    liquidationManager.address,
+    debtToken.target,
+    borrowOperations.target,
+    vault.target,
+    factory.target,
+    liquidationManager.target,
     params.gasCompensation
-  ]);
-  await troveManager.deployed();
-  console.log("TroveManager deployed to:", troveManager.address);
+  ], { unsafeAllow: ['constructor'] });
+  await troveManager.waitForDeployment();
+  console.log("TroveManager deployed to:", troveManager.target);
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: troveManager.address,
+        address: troveManager.target,
         constructorArguments: [
-          listaCore.address,
+          listaCore.target,
           params.gasPool,
-          debtToken.address,
-          borrowOperations.address,
-          vault.address,
-          liquidationManager.address,
+          debtToken.target,
+          borrowOperations.target,
+          vault.target,
+          factory.target,
+          liquidationManager.target,
           params.gasCompensation
         ],
       });

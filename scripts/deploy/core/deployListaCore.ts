@@ -1,6 +1,6 @@
 import { DEPLOYMENT_PARAMS } from "../../../constants";
 import hre, { ethers } from "hardhat";
-import { Signer } from "ethers";
+import { Signer, ZeroAddress } from "ethers";
 
 const params = DEPLOYMENT_PARAMS[11155111];
 
@@ -10,21 +10,21 @@ export const deployListaCore = async (owner: Signer) => {
   const listaCore = await ethers.deployContract("ListaCore", [
     await owner.getAddress(), // owner
     params.guardian,
-    ethers.constants.AddressZero, // priceFeed
-    ethers.constants.AddressZero // feeReceiver
+    ZeroAddress, // priceFeed
+    ZeroAddress // feeReceiver
   ]);
-  await listaCore.deployed();
-  console.log("ListaCore deployed to:", listaCore.address);
+  await listaCore.waitForDeployment();
+  console.log("ListaCore deployed to:", await listaCore.getAddress());
 
   while (hre.network.name !== "hardhat") {
     try {
       await hre.run("verify:verify", {
-        address: listaCore.address,
+        address: listaCore.target,
         constructorArguments: [
           await owner.getAddress(), // owner
           params.guardian,
-          ethers.constants.AddressZero, // priceFeed
-          ethers.constants.AddressZero, // feeReceiver
+          ZeroAddress, // priceFeed
+          ZeroAddress // feeReceiver
         ],
       });
       break;
