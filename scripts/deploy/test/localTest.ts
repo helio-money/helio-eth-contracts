@@ -120,7 +120,40 @@ export const closeTrove = async (borrowerOperations: Contract, troveManager: Con
     }
 
 }
+
 export const depositToSP = async (stabilityPool: Contract) => {
     await stabilityPool.provideToSP(100);
     console.log("Deposited 100 lisUSD to StabilityPool");
-  }
+}
+
+
+export const pause = async (listaCore: Contract, whitelistedUser: Signer) => {
+    console.log("Pausing ListaCore");
+    const tx = await listaCore.addToWhitelist([await whitelistedUser.getAddress()]);
+    await tx.wait();
+    const res = await listaCore.whitelist(await whitelistedUser.getAddress());
+    expect(res).to.equal(1);
+    try {
+        await listaCore.setPaused(true);
+    } catch (e) {
+        console.log("Pause error", e);
+    }
+
+    expect(await listaCore.paused()).to.equal(true);
+    console.log("Paused ListaCore");
+}
+
+
+export const unpause = async (listaCore: Contract, guardian: Signer) => {
+    console.log("Unpausing ListaCore");
+    await listaCore.setGuardian(await guardian.getAddress());
+    expect(await listaCore.guardian()).to.equal(await guardian.getAddress());
+    try {
+        await listaCore.connect(guardian).setPaused(false);
+    } catch (e) {
+        console.log("Unpause error", e);
+    }
+
+    expect(await listaCore.paused()).to.equal(false);
+    console.log("Unpaused ListaCore");
+}

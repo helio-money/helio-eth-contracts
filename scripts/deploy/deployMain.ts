@@ -18,18 +18,19 @@ import { deployTokenLocker } from "./dao/deployTokenLocker";
 import { deployVault } from "./dao/deployVault";
 import { deployFeeReceiver } from "./dao/deployFeeReceiver";
 import { Contract, Signer } from "ethers";
-import { openTrove, depositToSP, adjustTrove, repayDebt, closeTrove } from "./test/localTest";
 import { DEPLOYMENT_PARAMS } from "../../constants/index"
 import { upgradeCore } from "./test/upgradeCore";
+import { openTrove, adjustTrove, closeTrove, repayDebt, depositToSP, pause, unpause} from "./test/localTest";
 
 export const deployMain = async () => {
-  let owner: Signer;
+  let owner, guardian, whitelistedUser: Signer;
   if (hre.network.name === "hardhat") {
-    const signers = await ethers.getSigners();
-    owner = signers[0];
+    [owner, guardian, whitelistedUser] = await ethers.getSigners();
   } else if (hre.network.name === "sepolia") {
     const deployerKey = process.env.SEPOLIA_DEPLOYER_KEY || ""; // Provide a default value if undefined
     owner = new ethers.Wallet(deployerKey);
+    guardian = new ethers.Wallet(deployerKey);
+    whitelistedUser = new ethers.Wallet(deployerKey);
   } else {
     throw Error("Unsupported network");
   }
@@ -111,11 +112,23 @@ export const deployMain = async () => {
   console.log("FeeReceiver:", feeReceiver.target);
 
   if (hre.network.name === "hardhat") {
-    await localTest(listaCore, borrowerOperations, stabilityPool, troveManager, priceFeed, sortedTroves, wBETH, liquidationManager, debtToken);
+    await localTest(listaCore, borrowerOperations, stabilityPool, troveManager, priceFeed, sortedTroves, wBETH, liquidationManager, debtToken, whitelistedUser, guardian);
   }
 }
 
-const localTest = async (listaCore: Contract, borrowerOperations: Contract, stabilityPool: Contract, troveManager: Contract, priceFeed: Contract, sortedTroves: Contract, wBETH: string, liquidationManager: Contract, debtToken: Contract) => {
+const localTest = async (
+  listaCore: Contract,
+  borrowerOperations: Contract,
+  stabilityPool: Contract,
+  troveManager: Contract,
+  priceFeed: Contract,
+  sortedTroves: Contract,
+  wBETH: string,
+  liquidationManager: Contract,
+  debtToken: Contract,
+  whitelistedUser: Signer,
+  guardian: Signer,
+  ) => {
   console.log("Running local test...");
   await openTrove(troveManager, borrowerOperations, wBETH);
   await adjustTrove(troveManager, borrowerOperations);
@@ -128,6 +141,9 @@ const localTest = async (listaCore: Contract, borrowerOperations: Contract, stab
   await repayDebt(borrowerOperations, troveManager);
 //  await closeTrove(borrowerOperations, troveManager, wBETH, debtToken);
   await depositToSP(stabilityPool);
+
+  await pause(listaCore, whitelistedUser);
+  await unpause(listaCore, guardian);
 
   console.log("Local test done");
 }

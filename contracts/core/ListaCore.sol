@@ -27,6 +27,8 @@ contract ListaCore {
 
     // System-wide pause. When true, disables trove adjustments across all collaterals.
     bool public paused;
+    // Whitelist for contracts that are allowed to initiat the system-wide pause.
+    mapping(address => uint) public whitelist;
 
     // System-wide start time, rounded down the nearest epoch week.
     // Other contracts that require access to this should inherit `SystemStart`.
@@ -111,16 +113,35 @@ contract ListaCore {
      * @param _paused If true the protocol is paused
      */
     function setPaused(bool _paused) external {
-        require(
-            (_paused && msg.sender == guardian) || msg.sender == owner,
-            "Unauthorized"
-        );
-        paused = _paused;
+        require(paused != _paused, "Already set");
+
         if (_paused) {
+            require(msg.sender == owner || whitelist[msg.sender] == 1, "Only whitelisted or owner can pause");
             emit Paused();
         } else {
+            require(msg.sender == owner || msg.sender == guardian, "Only guardian or owner can unpause");
             emit Unpaused();
         }
+
+        paused = _paused;
+    }
+
+    /**
+     * @notice Add addresses to the whitelist
+     * @param users Addresses to add
+     */
+    function addToWhitelist(address[] memory users) external onlyOwner {
+        for(uint256 i = 0; i < users.length; i++)
+            whitelist[users[i]] = 1;
+    }
+
+    /**
+     * @notice Remove addresses from the whitelist
+     * @param users Addresses to remove
+     */
+    function removeFromWhitelist(address[] memory users) external onlyOwner {
+        for(uint256 i = 0; i < users.length; i++)
+            whitelist[users[i]] = 0;
     }
 
     function commitTransferOwnership(address newOwner) external onlyOwner {
