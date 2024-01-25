@@ -50,9 +50,9 @@ contract ListaCore {
 
     event GuardianSet(address guardian);
 
-    event Paused();
+    event Paused(address pauser);
 
-    event Unpaused();
+    event Unpaused(address unpauser);
 
     constructor(
         address _owner,
@@ -117,10 +117,10 @@ contract ListaCore {
 
         if (_paused) {
             require(msg.sender == owner || whitelist[msg.sender] == 1, "Only whitelisted or owner can pause");
-            emit Paused();
+            emit Paused(msg.sender);
         } else {
             require(msg.sender == owner || msg.sender == guardian, "Only guardian or owner can unpause");
-            emit Unpaused();
+            emit Unpaused(msg.sender);
         }
 
         paused = _paused;

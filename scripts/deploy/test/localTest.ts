@@ -33,6 +33,8 @@ export const openTrove = async (troveManager: Contract, borrowerOperations: Cont
               value: parseEther("1000"),
             }
         );
+        await tx.wait();
+        expect(tx).to.emit(troveManager, "TroveUpdated").withArgs(await signer.getAddress(), 101500000000000000000n, 1000000000000000000000n, 1000000000000000000000n, 0);
         expect(await collateralToken.balanceOf(troveManager.target)).to.equal("1000000000000000000000");
 
         console.log("openTrove done");
@@ -134,7 +136,9 @@ export const pause = async (listaCore: Contract, whitelistedUser: Signer) => {
     const res = await listaCore.whitelist(await whitelistedUser.getAddress());
     expect(res).to.equal(1);
     try {
-        await listaCore.setPaused(true);
+        const tx = await listaCore.connect(whitelistedUser).setPaused(true);
+        await tx.wait();
+        expect(tx).to.emit(listaCore, "Paused").withArgs(await whitelistedUser.getAddress());
     } catch (e) {
         console.log("Pause error", e);
     }
@@ -149,7 +153,9 @@ export const unpause = async (listaCore: Contract, guardian: Signer) => {
     await listaCore.setGuardian(await guardian.getAddress());
     expect(await listaCore.guardian()).to.equal(await guardian.getAddress());
     try {
-        await listaCore.connect(guardian).setPaused(false);
+        const tx = await listaCore.connect(guardian).setPaused(false);
+        await tx.wait();
+        expect(tx).to.emit(listaCore, "Unpaused").withArgs(await guardian.getAddress());
     } catch (e) {
         console.log("Unpause error", e);
     }
